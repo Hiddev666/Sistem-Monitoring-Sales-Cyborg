@@ -3,9 +3,22 @@
 @section('title', isset($user) ? 'Edit User' : 'Tambah User')
 
 @section('content')
+@php
+    $isSuperAdmin = auth()->user()?->isSuperAdmin();
+    $isAdmin = auth()->user()?->isAdmin() && !$isSuperAdmin;
+@endphp
 <div class="row mb-4">
     <div class="col-sm-6">
         <h1 class="h3">{{ isset($user) ? 'Edit User' : 'Tambah User Baru' }}</h1>
+        <div class="text-muted mt-1">
+            @if($isSuperAdmin)
+                Super Admin dapat menetapkan semua role, termasuk admin dan manager.
+            @elseif($isAdmin)
+                Admin hanya dapat membuat atau memperbarui user role sales.
+            @else
+                Role dikunci untuk user sales agar struktur akses tetap aman.
+            @endif
+        </div>
     </div>
     <div class="col-sm-6 text-end">
         <a href="{{ route('admin.users.index') }}" class="btn btn-secondary">
@@ -73,19 +86,36 @@
 
             <div class="row">
                 <div class="col-md-6 mb-3">
-                    <label for="role" class="form-label">Role <span class="text-danger">*</span></label>
-                    <select class="form-select @error('role') is-invalid @enderror" id="role" name="role" required>
-                        <option value="">-- Pilih Role --</option>
-                        @foreach($roles as $role)
-                            <option value="{{ $role->id }}" 
-                                    {{ old('role', isset($user) && $user->roles->isNotEmpty() ? $user->roles->first()->id : '') == $role->id ? 'selected' : '' }}>
-                                {{ ucfirst($role->name) }}
-                            </option>
-                        @endforeach
-                    </select>
-                    @error('role')
-                        <div class="invalid-feedback">{{ $message }}</div>
-                    @enderror
+                    @if($isSuperAdmin)
+                        <label for="role" class="form-label">Role <span class="text-danger">*</span></label>
+                        <select class="form-select @error('role') is-invalid @enderror" id="role" name="role" required>
+                            <option value="">-- Pilih Role --</option>
+                            @foreach($roles as $role)
+                                <option value="{{ $role->id }}" 
+                                        {{ old('role', isset($user) && $user->roles->isNotEmpty() ? $user->roles->first()->id : '') == $role->id ? 'selected' : '' }}>
+                                    {{ ucfirst($role->name) }}
+                                </option>
+                            @endforeach
+                        </select>
+                        <small class="text-muted d-block mt-1">Super Admin dapat memilih role apa pun, termasuk admin, manager, dan sales.</small>
+                        @error('role')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                    @elseif($isAdmin)
+                        <label class="form-label">Role Terbatas</label>
+                        <div class="form-control bg-light">
+                            Sales
+                        </div>
+                        <input type="hidden" name="role" value="{{ old('role', $defaultRoleId ?? ($user->roles->first()->id ?? '')) }}">
+                        <small class="text-muted d-block mt-1">Admin hanya dapat membuat atau memperbarui user dengan role sales.</small>
+                    @else
+                        <label class="form-label">Role</label>
+                        <div class="form-control bg-light">
+                            Sales
+                        </div>
+                        <input type="hidden" name="role" value="{{ old('role', $defaultRoleId ?? ($user->roles->first()->id ?? '')) }}">
+                        <small class="text-muted d-block mt-1">Role dikunci untuk user sales.</small>
+                    @endif
                 </div>
 
                 <div class="col-md-6 mb-3">

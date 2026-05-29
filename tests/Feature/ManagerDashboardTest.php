@@ -17,9 +17,13 @@ class ManagerDashboardTest extends TestCase
         $this->actingAs($manager)
             ->get(route('manager.dashboard'))
             ->assertOk()
+            ->assertSeeText('Ringkasan Hari Ini')
+            ->assertSeeText('Aksi Cepat')
+            ->assertSeeText('Monitoring Real-Time')
             ->assertSee(route('manager.analytics.dashboard'), false)
             ->assertSee(route('manager.analytics.sales-performance'), false)
-            ->assertSee(route('manager.reports.export-sales-performance'), false);
+            ->assertSee(route('manager.reports.export-sales-performance'), false)
+            ->assertDontSee(route('admin.configuration.index'), false);
     }
 
     private function createUserWithRole(string $role): User

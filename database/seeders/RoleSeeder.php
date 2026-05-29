@@ -77,8 +77,8 @@ class RoleSeeder extends Seeder
 
         $adminRole = Role::findByName('admin');
         $adminRole->givePermissionTo([
-            'manage_klien', 'manage_wilayah', 'create_pjp', 'edit_pjp', 'delete_pjp',
-            'view_attendance', 'view_kunjungan', 'manage_config'
+            'manage_users', 'manage_klien', 'manage_wilayah', 'create_pjp', 'edit_pjp', 'delete_pjp',
+            'view_attendance', 'view_kunjungan'
         ]);
 
         $managerRole = Role::findByName('manager');

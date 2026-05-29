@@ -45,6 +45,8 @@ class AdminDashboardTest extends TestCase
         $response = $this->actingAs($admin)->get(route('admin.dashboard'));
 
         $response->assertOk()
+            ->assertSeeText('Operasional')
+            ->assertSeeText('Monitoring Real-Time')
             ->assertSeeText('Pengguna Aktif')
             ->assertSeeText('Sales aktif: 1')
             ->assertSeeText('Klien Aktif')
@@ -52,9 +54,12 @@ class AdminDashboardTest extends TestCase
             ->assertSeeText('Kunjungan: 1')
             ->assertSeeText('Absensi aktif: 1')
             ->assertSee(route('admin.users.index'), false)
+            ->assertSee(route('admin.monitoring.index'), false)
+            ->assertSee(route('admin.photo-gallery.index'), false)
             ->assertSee(route('admin.pjp.create'), false)
-            ->assertSee(route('admin.reports.export-sales-performance'), false)
-            ->assertSee(route('admin.monitoring.index'), false);
+            ->assertDontSee(route('admin.analytics.dashboard'), false)
+            ->assertDontSee(route('admin.reports.export-sales-performance'), false)
+            ->assertDontSee(route('admin.configuration.index'), false);
     }
 
     public function test_sales_cannot_access_admin_dashboard(): void

@@ -5,21 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'Sales Force Monitor')</title>
-    
+
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    
+
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-        
+
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    
+
     <!-- Yajra DataTables CSS -->
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
-    
+
     @stack('styles')
-    
+
     <style>
         * {
             scroll-behavior: smooth;
@@ -180,6 +180,25 @@
     @yield('css')
 </head>
 <body>
+    @php
+        $authUser = auth()->user();
+        $isSales = $authUser?->isSales();
+        $isManager = $authUser?->isManager();
+        $isAdmin = $authUser?->isAdmin();
+        $isSuperAdmin = $authUser?->isSuperAdmin();
+        $canManageUsers = $authUser?->can('manage_users');
+        $canViewReports = $authUser?->can('view_reports');
+        $canExportReports = $authUser?->can('export_reports');
+        $canViewKunjungan = $authUser?->can('view_kunjungan');
+
+        $dashboardRoute = $isSales ? 'sales.dashboard' : ($isManager ? 'manager.dashboard' : 'admin.dashboard');
+        $analyticsDashboardRoute = $isManager ? 'manager.analytics.dashboard' : 'admin.analytics.dashboard';
+        $salesPerformanceRoute = $isManager ? 'manager.analytics.sales-performance' : 'admin.analytics.sales-performance';
+        $regionalPerformanceRoute = $isManager ? 'manager.analytics.regional-performance' : 'admin.analytics.regional-performance';
+        $klienAnalysisRoute = $isManager ? 'manager.analytics.klien-analysis' : 'admin.analytics.klien-analysis';
+        $roleName = $authUser?->roles->first()?->name ?? 'unknown';
+    @endphp
+
     <!-- Sidebar Navigation -->
     <div class="sidebar" id="sidebar">
         <div class="brand">
@@ -192,32 +211,65 @@
         <nav class="nav flex-column">
             @auth
                 <!-- Dashboard -->
-                <a class="nav-link @if(Route::is('*.dashboard')) active @endif" href="{{ auth()->user()->isSales() ? route('sales.dashboard') : (auth()->user()->isManager() ? route('manager.dashboard') : route('admin.dashboard')) }}">
+                <a class="nav-link @if(Route::is('*.dashboard')) active @endif" href="{{ route($dashboardRoute) }}">
                     <i class="fas fa-gauge-high"></i> Dashboard
                 </a>
 
-                @if(auth()->user()->isAdmin())
-                    <!-- Master Data -->
+                @if($canManageUsers)
+                    <!-- User Management -->
                     <hr class="text-white-50">
-                    <span class="nav-link text-uppercase" style="cursor: default; font-size: 0.75rem; color: rgba(255,255,255,0.5);">Data Master</span>
-                    
+                    <span class="nav-link text-uppercase" style="cursor: default; font-size: 0.75rem; color: rgba(255,255,255,0.5);">Manajemen User</span>
+
                     <a class="nav-link {{ request()->routeIs('admin.users.*') ? 'active' : '' }}" href="{{ route('admin.users.index') }}">
                         <i class="fas fa-users"></i> Pengguna
                     </a>
+                @endif
+
+                @if($isAdmin)
+                    <!-- Master Data -->
+                    <hr class="text-white-50">
+                    <span class="nav-link text-uppercase" style="cursor: default; font-size: 0.75rem; color: rgba(255,255,255,0.5);">Data Master</span>
+
                     <a class="nav-link {{ request()->routeIs('admin.klien.*') ? 'active' : '' }}" href="{{ route('admin.klien.index') }}">
                         <i class="fas fa-building"></i> Klien/Toko
                     </a>
                     <a class="nav-link {{ request()->routeIs('admin.wilayah.*') ? 'active' : '' }}" href="{{ route('admin.wilayah.index') }}">
                         <i class="fas fa-map"></i> Wilayah
                     </a>
-                    <a class="nav-link {{ request()->routeIs('admin.configuration.*') ? 'active' : '' }}" href="{{ route('admin.configuration.index') }}">
-                        <i class="fas fa-cog"></i> Konfigurasi
+
+                    <!-- Monitoring & Reporting -->
+                    <hr class="text-white-50">
+                    <span class="nav-link text-uppercase" style="cursor: default; font-size: 0.75rem; color: rgba(255,255,255,0.5);">Monitoring & Laporan</span>
+
+                    <a class="nav-link {{ request()->routeIs('admin.monitoring.index') ? 'active' : '' }}" href="{{ route('admin.monitoring.index') }}">
+                        <i class="fas fa-satellite-dish"></i> Monitoring Real-Time
                     </a>
-                    
+
+                    @if($canViewReports)
+                        @php($analyticsActive = request()->routeIs('admin.analytics.*', 'manager.analytics.*'))
+                        <a class="nav-link {{ $analyticsActive ? 'active' : '' }}" href="{{ route($analyticsDashboardRoute) }}">
+                            <i class="fas fa-chart-pie"></i> Ringkasan Analytics
+                        </a>
+                        <a class="nav-link {{ request()->routeIs('admin.analytics.sales-performance', 'manager.analytics.sales-performance') ? 'active' : '' }}" href="{{ route($salesPerformanceRoute) }}">
+                            <i class="fas fa-chart-bar"></i> Performa Sales
+                        </a>
+                        <a class="nav-link {{ request()->routeIs('admin.analytics.regional-performance', 'manager.analytics.regional-performance') ? 'active' : '' }}" href="{{ route($regionalPerformanceRoute) }}">
+                            <i class="fas fa-map-marked-alt"></i> Performa Regional
+                        </a>
+                        <a class="nav-link {{ request()->routeIs('admin.analytics.klien-analysis', 'manager.analytics.klien-analysis') ? 'active' : '' }}" href="{{ route($klienAnalysisRoute) }}">
+                            <i class="fas fa-users"></i> Analisis Klien
+                        </a>
+                    @endif
+                    @if($canViewKunjungan)
+                        <a class="nav-link {{ request()->routeIs('admin.photo-gallery.*') ? 'active' : '' }}" href="{{ route('admin.photo-gallery.index') }}">
+                            <i class="fas fa-images"></i> Galeri Kunjungan
+                        </a>
+                    @endif
+
                     <!-- Scheduling -->
                     <hr class="text-white-50">
                     <span class="nav-link text-uppercase" style="cursor: default; font-size: 0.75rem; color: rgba(255,255,255,0.5);">Penjadwalan & Absensi</span>
-                    
+
                     <a class="nav-link {{ request()->routeIs('admin.pjp.*') ? 'active' : '' }}" href="{{ route('admin.pjp.index') }}">
                         <i class="fas fa-calendar-check"></i> PJP (Jadwal)
                     </a>
@@ -230,7 +282,7 @@
                     <!-- Sales Menu -->
                     <hr class="text-white-50">
                     <span class="nav-link text-uppercase" style="cursor: default; font-size: 0.75rem; color: rgba(255,255,255,0.5);">Operasional</span>
-                    
+
                     <a class="nav-link {{ request()->routeIs('sales.pjp.*') ? 'active' : '' }}" href="{{ route('sales.pjp.today') }}">
                         <i class="fas fa-calendar-alt"></i> Jadwal Hari Ini
                     </a>
@@ -239,15 +291,10 @@
                     </a>
                 @endif
 
-                @if(auth()->user()->isManager())
+                @if($isManager)
                     <!-- Manager Menu -->
                     <hr class="text-white-50">
                     <span class="nav-link text-uppercase" style="cursor: default; font-size: 0.75rem; color: rgba(255,255,255,0.5);">Laporan</span>
-                    
-                    @php($analyticsDashboardRoute = auth()->user()->isManager() ? 'manager.analytics.dashboard' : 'admin.analytics.dashboard')
-                    @php($salesPerformanceRoute = auth()->user()->isManager() ? 'manager.analytics.sales-performance' : 'admin.analytics.sales-performance')
-                    @php($regionalPerformanceRoute = auth()->user()->isManager() ? 'manager.analytics.regional-performance' : 'admin.analytics.regional-performance')
-                    @php($klienAnalysisRoute = auth()->user()->isManager() ? 'manager.analytics.klien-analysis' : 'admin.analytics.klien-analysis')
 
                     <a class="nav-link {{ request()->routeIs('admin.analytics.dashboard', 'manager.analytics.dashboard') ? 'active' : '' }}" href="{{ route($analyticsDashboardRoute) }}">
                         <i class="fas fa-chart-pie"></i> Ringkasan Analytics
@@ -263,10 +310,20 @@
                     </a>
                 @endif
 
+                @if($isSuperAdmin)
+                    <!-- Super Admin Control -->
+                    <hr class="text-white-50">
+                    <span class="nav-link text-uppercase" style="cursor: default; font-size: 0.75rem; color: rgba(255,255,255,0.5);">Kontrol Super Admin</span>
+
+                    <a class="nav-link {{ request()->routeIs('admin.configuration.*') ? 'active' : '' }}" href="{{ route('admin.configuration.index') }}">
+                        <i class="fas fa-cog"></i> Konfigurasi Sistem
+                    </a>
+                @endif
+
                 <!-- Account -->
                 <hr class="text-white-50">
                 <span class="nav-link text-uppercase" style="cursor: default; font-size: 0.75rem; color: rgba(255,255,255,0.5);">Akun</span>
-                
+
                 <a class="nav-link" href="{{ route('password.change') }}">
                     <i class="fas fa-lock"></i> Ubah Password
                 </a>
@@ -289,10 +346,10 @@
                 @auth
                     <div>
                         <small class="text-muted d-block">Logged in as</small>
-                        <strong>{{ auth()->user()->name }}</strong>
+                        <strong>{{ $authUser?->name }}</strong>
                     </div>
-                    <span class="badge badge-role {{ auth()->user()->roles->first()->name ?? 'unknown' }}">
-                        {{ auth()->user()->getRoleLabel() }}
+                    <span class="badge badge-role {{ $roleName }}">
+                        {{ $authUser?->getRoleLabel() }}
                     </span>
                     <form method="POST" action="{{ route('logout') }}" class="d-inline">
                         @csrf
@@ -347,13 +404,13 @@
 
     <!-- Bootstrap 5 JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    
+
     <!-- jQuery (for DataTables) -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    
+
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    
+
     <!-- DataTables JS -->
     <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>

@@ -10,10 +10,20 @@ use Illuminate\View\View;
 class ConfigurationController
 {
     /**
+     * Ensure only super admin can manage configuration.
+     */
+    private function abortIfNotSuperAdmin(): void
+    {
+        abort_unless(auth()->user()?->isSuperAdmin(), 403, 'Anda tidak memiliki akses ke konfigurasi sistem.');
+    }
+
+    /**
      * Show configuration form
      */
     public function index(): View
     {
+        $this->abortIfNotSuperAdmin();
+
         $gpsRadius = Configuration::getGpsRadiusTolerance();
         $sessionTimeout = Configuration::getValue('session_timeout_minutes', 120);
         $exportFormat = Configuration::getValue('export_format', 'pdf');
@@ -30,6 +40,8 @@ class ConfigurationController
      */
     public function update(Request $request): RedirectResponse
     {
+        $this->abortIfNotSuperAdmin();
+
         $validated = $request->validate([
             'gps_radius_tolerance' => ['required', 'integer', 'min:10', 'max:1000'],
             'session_timeout_minutes' => ['required', 'integer', 'min:15', 'max:480'],
@@ -61,6 +73,8 @@ class ConfigurationController
      */
     public function reset(): RedirectResponse
     {
+        $this->abortIfNotSuperAdmin();
+
         Configuration::setValue(
             Configuration::GPS_RADIUS_TOLERANCE_KEY,
             Configuration::DEFAULT_GPS_RADIUS_TOLERANCE,

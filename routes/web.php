@@ -137,7 +137,7 @@ Route::middleware(['auth', 'session.timeout'])->group(function () {
         // ===========================
 
         // User Management (F-30)
-        Route::prefix('users')->name('users.')->group(function () {
+        Route::prefix('users')->name('users.')->middleware('permission:manage_users')->group(function () {
             Route::get('/', [UserController::class, 'index'])->name('index');
             Route::get('/data', [UserController::class, 'getUsers'])->name('data');
             Route::get('/create', [UserController::class, 'create'])->name('create');
@@ -169,7 +169,7 @@ Route::middleware(['auth', 'session.timeout'])->group(function () {
         });
 
         // Configuration (F-33)
-        Route::prefix('configuration')->name('configuration.')->group(function () {
+        Route::prefix('configuration')->name('configuration.')->middleware('permission:manage_config')->group(function () {
             Route::get('/', [ConfigurationController::class, 'index'])->name('index');
             Route::put('/', [ConfigurationController::class, 'update'])->name('update');
             Route::post('/reset', [ConfigurationController::class, 'reset'])->name('reset');
