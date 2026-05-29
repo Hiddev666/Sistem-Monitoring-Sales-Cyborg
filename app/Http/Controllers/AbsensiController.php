@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Absensi;
+use App\Models\JadwalKlien;
+use App\Models\JadwalKunjungan;
 use App\Services\GpsValidationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -47,7 +49,7 @@ class AbsensiController extends Controller
         $validated = $request->validate([
             'latitude' => 'required|numeric|between:-90,90',
             'longitude' => 'required|numeric|between:-180,180',
-            'accuracy' => 'nullable|numeric|min:0',
+            'accuracy' => 'nullable|numeric|min:0|max:999999.99',
         ]);
 
         try {
@@ -108,7 +110,7 @@ class AbsensiController extends Controller
         $validated = $request->validate([
             'latitude' => 'required|numeric|between:-90,90',
             'longitude' => 'required|numeric|between:-180,180',
-            'accuracy' => 'nullable|numeric|min:0',
+            'accuracy' => 'nullable|numeric|min:0|max:999999.99',
         ]);
 
         try {
@@ -128,6 +130,13 @@ class AbsensiController extends Controller
                 return response()->json([
                     'success' => false,
                     'message' => 'Anda sudah check-out hari ini pada ' . $absensi->waktu_keluar,
+                ], 400);
+            }
+
+            if ($this->hasOpenActiveScheduleVisits($user->id)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Selesaikan semua kunjungan sebelum absensi pulang.',
                 ], 400);
             }
 
@@ -288,5 +297,19 @@ class AbsensiController extends Controller
         $hours = floor($minutes / 60);
         $mins = $minutes % 60;
         return sprintf('%02d:%02d', $hours, $mins);
+    }
+
+    private function hasOpenActiveScheduleVisits(int $userId): bool
+    {
+        return JadwalKlien::whereHas('jadwalKunjungan', function ($query) use ($userId) {
+            $query->where('user_id', $userId)
+                ->whereDate('tanggal', today())
+                ->where('status', JadwalKunjungan::STATUS_ACTIVE);
+        })
+            ->whereNotIn('status', [
+                JadwalKlien::STATUS_COMPLETED,
+                JadwalKlien::STATUS_SKIPPED,
+            ])
+            ->exists();
     }
 }

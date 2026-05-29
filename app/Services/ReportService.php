@@ -156,18 +156,21 @@ class ReportService
         $no = 1;
 
         foreach ($klien as $k) {
-            $visits = JadwalKlien::where('klien_id', $k->id)
-                ->whereBetween('created_at', [$startDate, $endDate])
+            $visits = JadwalKlien::join('jadwal_kunjungan', 'jadwal_klien.jadwal_kunjungan_id', '=', 'jadwal_kunjungan.id')
+                ->where('jadwal_klien.klien_id', $k->id)
+                ->whereBetween('jadwal_kunjungan.tanggal', [$startDate, $endDate])
                 ->count();
 
-            $purchases = JadwalKlien::where('klien_id', $k->id)
-                ->where('hasil_tipe', 'pembelian')
-                ->whereBetween('created_at', [$startDate, $endDate])
+            $purchases = JadwalKlien::join('jadwal_kunjungan', 'jadwal_klien.jadwal_kunjungan_id', '=', 'jadwal_kunjungan.id')
+                ->where('jadwal_klien.klien_id', $k->id)
+                ->where('jadwal_klien.hasil_tipe', 'pembelian')
+                ->whereBetween('jadwal_kunjungan.tanggal', [$startDate, $endDate])
                 ->count();
 
-            $revenue = JadwalKlien::where('klien_id', $k->id)
-                ->whereBetween('created_at', [$startDate, $endDate])
-                ->sum('nominal_transaksi') ?? 0;
+            $revenue = JadwalKlien::join('jadwal_kunjungan', 'jadwal_klien.jadwal_kunjungan_id', '=', 'jadwal_kunjungan.id')
+                ->where('jadwal_klien.klien_id', $k->id)
+                ->whereBetween('jadwal_kunjungan.tanggal', [$startDate, $endDate])
+                ->sum('jadwal_klien.nominal_transaksi') ?? 0;
 
             $conversionRate = $visits > 0 ? ($purchases / $visits) * 100 : 0;
 
@@ -361,14 +364,24 @@ class ReportService
             ->when($wilayahId !== null, fn ($q) => $q->where('wilayah_id', $wilayahId))
             ->get()
             ->map(function ($klien) use ($startDate, $endDate) {
-                $visits = JadwalKlien::where('klien_id', $klien->id)->whereBetween('created_at', [$startDate, $endDate])->count();
-                $purchases = JadwalKlien::where('klien_id', $klien->id)->where('hasil_tipe', 'pembelian')->whereBetween('created_at', [$startDate, $endDate])->count();
+                $visits = JadwalKlien::join('jadwal_kunjungan', 'jadwal_klien.jadwal_kunjungan_id', '=', 'jadwal_kunjungan.id')
+                    ->where('jadwal_klien.klien_id', $klien->id)
+                    ->whereBetween('jadwal_kunjungan.tanggal', [$startDate, $endDate])
+                    ->count();
+                $purchases = JadwalKlien::join('jadwal_kunjungan', 'jadwal_klien.jadwal_kunjungan_id', '=', 'jadwal_kunjungan.id')
+                    ->where('jadwal_klien.klien_id', $klien->id)
+                    ->where('jadwal_klien.hasil_tipe', 'pembelian')
+                    ->whereBetween('jadwal_kunjungan.tanggal', [$startDate, $endDate])
+                    ->count();
 
                 return [
                     'Nama Klien' => $klien->nama_klien,
                     'Kunjungan' => $visits,
                     'Pembelian' => $purchases,
-                    'Revenue' => JadwalKlien::where('klien_id', $klien->id)->whereBetween('created_at', [$startDate, $endDate])->sum('nominal_transaksi') ?? 0,
+                    'Revenue' => JadwalKlien::join('jadwal_kunjungan', 'jadwal_klien.jadwal_kunjungan_id', '=', 'jadwal_kunjungan.id')
+                        ->where('jadwal_klien.klien_id', $klien->id)
+                        ->whereBetween('jadwal_kunjungan.tanggal', [$startDate, $endDate])
+                        ->sum('jadwal_klien.nominal_transaksi') ?? 0,
                     'Konversi' => $visits > 0 ? round(($purchases / $visits) * 100, 2) . '%' : '0%',
                 ];
             })->all();

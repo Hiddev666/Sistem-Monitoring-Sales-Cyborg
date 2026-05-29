@@ -29,11 +29,30 @@ class LocationController extends Controller
         $validated = $request->validate([
             'latitude' => 'required|numeric|between:-90,90',
             'longitude' => 'required|numeric|between:-180,180',
-            'accuracy' => 'nullable|numeric|min:0'
+            'accuracy' => 'nullable|numeric|min:0|max:999999.99'
         ]);
 
+        $user = Auth::user();
+
+        if (!$user?->isSales()) {
+            abort(403, 'Unauthorized');
+        }
+
+        $isCheckedIn = $user->absensi()
+            ->whereDate('tanggal', today())
+            ->whereNotNull('waktu_masuk')
+            ->whereNull('waktu_keluar')
+            ->exists();
+
+        if (!$isCheckedIn) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Location tracking is only active after attendance check-in'
+            ], 400);
+        }
+
         LokasiRealtime::create([
-            'user_id' => Auth::id(),
+            'user_id' => $user->id,
             'latitude' => $validated['latitude'],
             'longitude' => $validated['longitude'],
             'akurasi_meter' => $validated['accuracy'] ?? null,
@@ -52,11 +71,19 @@ class LocationController extends Controller
      */
     public function salesLocations()
     {
+        $viewer = Auth::user();
+
         $salesLocations = LokasiRealtime::with('user')
-            ->whereHas('user', function ($query) {
+            ->whereDate('recorded_at', today())
+            ->whereHas('user', function ($query) use ($viewer) {
                 $query->role('sales');
+
+                if ($viewer?->isManager() && $viewer->wilayah_id) {
+                    $query->where('wilayah_id', $viewer->wilayah_id);
+                }
             })
             ->latestPerUser()
+            ->orderByDesc('recorded_at')
             ->get();
 
         $salesData = $salesLocations->map(function ($location) {
@@ -77,8 +104,9 @@ class LocationController extends Controller
             ];
         });
 
-        $todayVisits = JadwalKlien::whereDate('created_at', today())->count();
-        $todayCompleted = JadwalKlien::whereDate('created_at', today())
+        $activeSales = $this->countActiveSalesForViewer($viewer);
+        $todayVisits = $this->scopeVisitsForViewer(JadwalKlien::query(), $viewer)->count();
+        $todayCompleted = $this->scopeVisitsForViewer(JadwalKlien::query(), $viewer)
             ->where('status', 'completed')
             ->count();
         $notMovingCount = $salesData->filter(function ($sales) {
@@ -87,7 +115,7 @@ class LocationController extends Controller
 
         return response()->json([
             'sales' => $salesData,
-            'activeSales' => $salesData->count(),
+            'activeSales' => $activeSales,
             'totalVisits' => $todayVisits,
             'completedVisits' => $todayCompleted,
             'notMoving' => $notMovingCount,
@@ -100,22 +128,22 @@ class LocationController extends Controller
      */
     public function dashboardStatistics()
     {
-        $activeSales = User::role('sales')
-            ->whereHas('absensi', function ($query) {
-                $query->whereDate('tanggal', today())
-                    ->whereNotNull('waktu_masuk')
-                    ->whereNull('waktu_keluar');
-            })
-            ->count();
+        $viewer = Auth::user();
 
-        $totalVisits = JadwalKlien::whereDate('created_at', today())->count();
-        $completedVisits = JadwalKlien::whereDate('created_at', today())
+        $activeSales = $this->countActiveSalesForViewer($viewer);
+        $totalVisits = $this->scopeVisitsForViewer(JadwalKlien::query(), $viewer)->count();
+        $completedVisits = $this->scopeVisitsForViewer(JadwalKlien::query(), $viewer)
             ->where('status', 'completed')
             ->count();
 
         $notMoving = LokasiRealtime::with('user')
-            ->whereHas('user', function ($query) {
+            ->whereDate('recorded_at', today())
+            ->whereHas('user', function ($query) use ($viewer) {
                 $query->role('sales');
+
+                if ($viewer?->isManager() && $viewer->wilayah_id) {
+                    $query->where('wilayah_id', $viewer->wilayah_id);
+                }
             })
             ->latestPerUser()
             ->get()
@@ -216,5 +244,32 @@ class LocationController extends Controller
             $query->where('user_id', $userId)
                 ->whereDate('tanggal', today());
         })->where('status', 'completed')->count();
+    }
+
+    private function scopeVisitsForViewer($query, ?User $viewer)
+    {
+        return $query->whereHas('jadwalKunjungan', function ($query) use ($viewer) {
+            $query->whereDate('tanggal', today());
+
+            if ($viewer?->isManager() && $viewer->wilayah_id) {
+                $query->whereHas('user', function ($query) use ($viewer) {
+                    $query->where('wilayah_id', $viewer->wilayah_id);
+                });
+            }
+        });
+    }
+
+    private function countActiveSalesForViewer(?User $viewer): int
+    {
+        return User::role('sales')
+            ->when($viewer?->isManager() && $viewer->wilayah_id, function ($query) use ($viewer) {
+                $query->where('wilayah_id', $viewer->wilayah_id);
+            })
+            ->whereHas('absensi', function ($query) {
+                $query->whereDate('tanggal', today())
+                    ->whereNotNull('waktu_masuk')
+                    ->whereNull('waktu_keluar');
+            })
+            ->count();
     }
 }

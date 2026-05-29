@@ -1,6 +1,13 @@
 @extends('layouts.app')
 
 @section('content')
+@php
+    $isManager = auth()->user()?->isManager();
+    $analyticsDashboardRoute = $isManager ? 'manager.analytics.dashboard' : 'admin.analytics.dashboard';
+    $salesPerformanceRoute = $isManager ? 'manager.analytics.sales-performance' : 'admin.analytics.sales-performance';
+    $klienAnalysisRoute = $isManager ? 'manager.analytics.klien-analysis' : 'admin.analytics.klien-analysis';
+    $regionalPerformanceRoute = $isManager ? 'manager.analytics.regional-performance' : 'admin.analytics.regional-performance';
+@endphp
 <div class="container-fluid py-4">
     <!-- Header -->
     <div class="row mb-4">
@@ -30,7 +37,7 @@
                             </button>
                         </div>
                         <div class="col-md-3 d-flex align-items-end">
-                            <a href="{{ route('admin.analytics.dashboard') }}" class="btn btn-secondary w-100">
+                            <a href="{{ route($analyticsDashboardRoute) }}" class="btn btn-secondary w-100">
                                 <i class="fas fa-redo"></i> Reset
                             </a>
                         </div>
@@ -73,8 +80,8 @@
                     <h2 class="mb-0">{{ $stats['avg_visit_duration'] }} min</h2>
                 </div>
             </div>
-        </div>
     </div>
+</div>
 
     <!-- Charts Section -->
     <div class="row mb-4">
@@ -142,7 +149,7 @@
                         </table>
                     </div>
                     <div class="text-center mt-3">
-                        <a href="{{ route('admin.analytics.sales-performance') }}" class="btn btn-sm btn-outline-primary">
+                        <a href="{{ route($salesPerformanceRoute) }}" class="btn btn-sm btn-outline-primary">
                             <i class="fas fa-arrow-right"></i> Lihat Detail
                         </a>
                     </div>
@@ -187,7 +194,7 @@
                         </table>
                     </div>
                     <div class="text-center mt-3">
-                        <a href="{{ route('admin.analytics.klien-analysis') }}" class="btn btn-sm btn-outline-success">
+                        <a href="{{ route($klienAnalysisRoute) }}" class="btn btn-sm btn-outline-success">
                             <i class="fas fa-arrow-right"></i> Lihat Detail
                         </a>
                     </div>
@@ -218,13 +225,13 @@
                     <h5 class="mb-0"><i class="fas fa-link"></i> Akses Cepat</h5>
                 </div>
                 <div class="card-body">
-                    <a href="{{ route('admin.analytics.sales-performance') }}" class="btn btn-outline-primary me-2 mb-2">
+                    <a href="{{ route($salesPerformanceRoute) }}" class="btn btn-outline-primary me-2 mb-2">
                         <i class="fas fa-users"></i> Performa Sales
                     </a>
-                    <a href="{{ route('admin.analytics.klien-analysis') }}" class="btn btn-outline-success me-2 mb-2">
+                    <a href="{{ route($klienAnalysisRoute) }}" class="btn btn-outline-success me-2 mb-2">
                         <i class="fas fa-store"></i> Analisis Klien
                     </a>
-                    <a href="{{ route('admin.analytics.regional-performance') }}" class="btn btn-outline-warning me-2 mb-2">
+                    <a href="{{ route($regionalPerformanceRoute) }}" class="btn btn-outline-warning me-2 mb-2">
                         <i class="fas fa-map"></i> Performa Regional
                     </a>
                     <a href="{{ route('admin.photo-gallery.index') }}" class="btn btn-outline-info me-2 mb-2">

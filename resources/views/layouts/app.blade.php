@@ -244,16 +244,21 @@
                     <hr class="text-white-50">
                     <span class="nav-link text-uppercase" style="cursor: default; font-size: 0.75rem; color: rgba(255,255,255,0.5);">Laporan</span>
                     
-                    <a class="nav-link {{ request()->routeIs('admin.analytics.dashboard') ? 'active' : '' }}" href="{{ route('admin.analytics.dashboard') }}">
+                    @php($analyticsDashboardRoute = auth()->user()->isManager() ? 'manager.analytics.dashboard' : 'admin.analytics.dashboard')
+                    @php($salesPerformanceRoute = auth()->user()->isManager() ? 'manager.analytics.sales-performance' : 'admin.analytics.sales-performance')
+                    @php($regionalPerformanceRoute = auth()->user()->isManager() ? 'manager.analytics.regional-performance' : 'admin.analytics.regional-performance')
+                    @php($klienAnalysisRoute = auth()->user()->isManager() ? 'manager.analytics.klien-analysis' : 'admin.analytics.klien-analysis')
+
+                    <a class="nav-link {{ request()->routeIs('admin.analytics.dashboard', 'manager.analytics.dashboard') ? 'active' : '' }}" href="{{ route($analyticsDashboardRoute) }}">
                         <i class="fas fa-chart-pie"></i> Ringkasan Analytics
                     </a>
-                    <a class="nav-link {{ request()->routeIs('admin.analytics.sales-performance') ? 'active' : '' }}" href="{{ route('admin.analytics.sales-performance') }}">
+                    <a class="nav-link {{ request()->routeIs('admin.analytics.sales-performance', 'manager.analytics.sales-performance') ? 'active' : '' }}" href="{{ route($salesPerformanceRoute) }}">
                         <i class="fas fa-chart-bar"></i> Performa Sales
                     </a>
-                    <a class="nav-link {{ request()->routeIs('admin.analytics.regional-performance') ? 'active' : '' }}" href="{{ route('admin.analytics.regional-performance') }}">
+                    <a class="nav-link {{ request()->routeIs('admin.analytics.regional-performance', 'manager.analytics.regional-performance') ? 'active' : '' }}" href="{{ route($regionalPerformanceRoute) }}">
                         <i class="fas fa-map-marked-alt"></i> Performa Regional
                     </a>
-                    <a class="nav-link {{ request()->routeIs('admin.analytics.klien-analysis') ? 'active' : '' }}" href="{{ route('admin.analytics.klien-analysis') }}">
+                    <a class="nav-link {{ request()->routeIs('admin.analytics.klien-analysis', 'manager.analytics.klien-analysis') ? 'active' : '' }}" href="{{ route($klienAnalysisRoute) }}">
                         <i class="fas fa-users"></i> Analisis Klien
                     </a>
                 @endif

@@ -27,6 +27,24 @@ class ManagerReportAccessTest extends TestCase
         $this->actingAs($sales)->get(route('admin.analytics.dashboard'))->assertForbidden();
     }
 
+    public function test_manager_alias_routes_are_available(): void
+    {
+        $manager = $this->createUserWithRole('manager');
+
+        $this->actingAs($manager)->get(route('manager.analytics.dashboard'))->assertOk();
+        $this->actingAs($manager)->get(route('manager.analytics.sales-performance'))->assertOk();
+    }
+
+    public function test_manager_views_use_manager_export_aliases(): void
+    {
+        $manager = $this->createUserWithRole('manager');
+
+        $this->actingAs($manager)
+            ->get(route('admin.analytics.sales-performance'))
+            ->assertOk()
+            ->assertSee(route('manager.reports.export-sales-performance'), false);
+    }
+
     private function createUserWithRole(string $role): User
     {
         $user = User::factory()->create();

@@ -2,7 +2,7 @@
     <!-- Navigation -->
     @if($current > 0)
         <div class="col-12 mb-3">
-            <a href="#" onclick="openLightbox({{ $allPhotos[$current-1]->id }}); return false;" class="btn btn-outline-secondary float-start">
+                <a href="#" onclick="openLightbox({{ $allPhotos[$current-1]->id }}); return false;" class="btn btn-outline-secondary float-start">
                 <i class="fas fa-chevron-left"></i> Sebelumnya
             </a>
         </div>
@@ -50,14 +50,16 @@
                         <div class="tab-pane fade show active" id="tab-checkin" role="tabpanel">
                             <img src="{{ $jadwalKlien->getFotoCheckinUrl() }}" alt="Check-in" class="img-fluid rounded" style="max-height: 400px;">
                             <p class="text-muted mt-2">
-                                <small>{{ $jadwalKlien->created_at->format('d M Y H:i') }}</small>
-                            </p>
+                            <small>
+                                {{ ($dateBasis === 'upload_date' ? $jadwalKlien->created_at : ($jadwalKlien->jadwalKunjungan->tanggal ?? $jadwalKlien->created_at))->format('d M Y') }}
+                            </small>
+                        </p>
                         </div>
                         @if($jadwalKlien->foto_checkout)
                             <div class="tab-pane fade" id="tab-checkout" role="tabpanel">
                                 <img src="{{ $jadwalKlien->getFotoCheckoutUrl() }}" alt="Check-out" class="img-fluid rounded" style="max-height: 400px;">
                                 <p class="text-muted mt-2">
-                                    <small>{{ $jadwalKlien->waktu_checkout ? $jadwalKlien->waktu_checkout->format('d M Y H:i') : 'N/A' }}</small>
+                                <small>{{ $jadwalKlien->waktu_checkout ? $jadwalKlien->waktu_checkout->format('d M Y H:i') : 'N/A' }}</small>
                                 </p>
                             </div>
                         @endif
@@ -79,12 +81,12 @@
         <!-- Action Buttons -->
         <div class="mt-3 d-flex gap-2">
             @if($jadwalKlien->foto_checkin)
-                <a href="{{ route('admin.photo-gallery.download', [$jadwalKlien->id, 'checkin']) }}" class="btn btn-outline-primary flex-grow-1">
+                <a href="{{ route('admin.photo-gallery.download', ['jadwalKlien' => $jadwalKlien->id, 'type' => 'checkin', 'date_basis' => $dateBasis ?? 'visit_date']) }}" class="btn btn-outline-primary flex-grow-1">
                     <i class="fas fa-download"></i> Download Check-in
                 </a>
             @endif
             @if($jadwalKlien->foto_checkout)
-                <a href="{{ route('admin.photo-gallery.download', [$jadwalKlien->id, 'checkout']) }}" class="btn btn-outline-primary flex-grow-1">
+                <a href="{{ route('admin.photo-gallery.download', ['jadwalKlien' => $jadwalKlien->id, 'type' => 'checkout', 'date_basis' => $dateBasis ?? 'visit_date']) }}" class="btn btn-outline-primary flex-grow-1">
                     <i class="fas fa-download"></i> Download Check-out
                 </a>
             @endif
@@ -119,7 +121,7 @@
 
                 <p>
                     <strong>Tanggal:</strong><br>
-                    {{ $jadwalKlien->created_at->format('d M Y') }}
+                    {{ ($dateBasis === 'upload_date' ? $jadwalKlien->created_at : ($jadwalKlien->jadwalKunjungan->tanggal ?? $jadwalKlien->created_at))->format('d M Y') }}
                 </p>
 
                 <p>

@@ -65,9 +65,10 @@ class CreateTestUsersSeeder extends Seeder
 
         // Create additional sample sales users
         $salesUsers = [
-            ['name' => 'Budi Santoso', 'email' => 'budi@sistem.test', 'phone' => '081234567894'],
-            ['name' => 'Siti Rahayu', 'email' => 'siti@sistem.test', 'phone' => '081234567895'],
-            ['name' => 'Ahmad Fauzi', 'email' => 'ahmad@sistem.test', 'phone' => '081234567896'],
+            ['name' => 'Sirjudin', 'email' => 'sirjudin@gmail.com', 'phone' => '081234567894'],
+            ['name' => 'Subrianto', 'email' => 'subrianto@sistem.test', 'phone' => '081234567895'],
+            ['name' => 'Mustajab', 'email' => 'mustajab@sistem.test', 'phone' => '081234567896'],
+            ['name' => 'Nuzul', 'email' => 'nuzul@sistem.test', 'phone' => '081234567897'],
         ];
 
         foreach ($salesUsers as $index => $salesData) {
@@ -90,9 +91,10 @@ class CreateTestUsersSeeder extends Seeder
                 ['Admin', 'admin@sistem.test', 'admin'],
                 ['Manager', 'manager@sistem.test', 'manager'],
                 ['Sales', 'sales@sistem.test', 'sales'],
-                ['Budi Santoso', 'budi@sistem.test', 'sales'],
-                ['Siti Rahayu', 'siti@sistem.test', 'sales'],
-                ['Ahmad Fauzi', 'ahmad@sistem.test', 'sales'],
+                ['Sirjudin', 'sirjudin@gmail.command', 'sales'],
+                ['Subrianto', 'subrianto@sistem.test', 'sales'],
+                ['Mustajab', 'mustajab@sistem.test', 'sales'],
+                ['Nuzul', 'nuzul@sistem.test', 'sales'],
             ]
         );
     }

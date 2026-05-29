@@ -23,11 +23,11 @@
                         <div class="col-md-6">
                             <h6>Status Perjalanan:</h6>
                             <p>
-                                @if($jadwal->status === 'pending')
+                                @if($jadwal->isPendingStatus())
                                     <span class="badge bg-warning text-dark px-3 py-2">
                                         <i class="fas fa-hourglass-start"></i> Menunggu Dimulai
                                     </span>
-                                @elseif($jadwal->status === 'aktif')
+                                @elseif($jadwal->isActiveStatus())
                                     <span class="badge bg-info px-3 py-2">
                                         <i class="fas fa-spinner fa-spin"></i> Perjalanan Berlangsung
                                     </span>
@@ -54,11 +54,11 @@
 
                     <div class="row">
                         <div class="col-md-6">
-                            @if($jadwal->status === 'pending')
+                            @if($jadwal->isPendingStatus())
                                 <button class="btn btn-primary btn-lg" id="startJourneyBtn">
                                     <i class="fas fa-play-circle"></i> Mulai Perjalanan
                                 </button>
-                            @elseif($jadwal->status === 'aktif')
+                            @elseif($jadwal->isActiveStatus())
                                 <button class="btn btn-danger btn-lg" id="endJourneyBtn">
                                     <i class="fas fa-stop-circle"></i> Selesaikan Perjalanan
                                 </button>
@@ -101,11 +101,11 @@
                                             <span class="badge bg-primary">{{ $item->urutan }}</span>
                                             {{ $item->klien->nama_klien }}
                                         </h6>
-                                        @if($item->status === 'completed')
+                                        @if($item->isCompletedStatus())
                                             <span class="badge bg-success">
                                                 <i class="fas fa-check"></i> Selesai
                                             </span>
-                                        @elseif($item->status === 'active')
+                                        @elseif($item->isActiveStatus())
                                             <span class="badge bg-info">
                                                 <i class="fas fa-spinner fa-spin"></i> Aktif
                                             </span>
@@ -145,24 +145,20 @@
                                             <i class="fas fa-directions"></i> Arah
                                         </a>
 
-                                        @if($item->status !== 'completed' && $jadwal->status === 'aktif')
-                                            @if($item->status === 'pending')
-                                                <button class="btn btn-sm btn-primary checkin-btn" data-jadwal-klien-id="{{ $item->id }}">
-                                                    <i class="fas fa-check-in"></i> Check-In
-                                                </button>
-                                            @else
-                                                <button class="btn btn-sm btn-warning checkout-btn" data-jadwal-klien-id="{{ $item->id }}">
-                                                    <i class="fas fa-check-out"></i> Check-Out
-                                                </button>
-                                            @endif
-                                        @elseif($item->status === 'active' && !$item->isFormComplete())
-                                            <a href="{{ route('sales.pjp.form', [$jadwal->id, $item->id]) }}" class="btn btn-sm btn-success">
-                                                <i class="fas fa-clipboard-list"></i> Lengkapi Form
-                                            </a>
-                                        @elseif($item->isFormComplete())
+                                        @if($item->isFormComplete())
                                             <span class="badge bg-success ms-2">
                                                 <i class="fas fa-file-check"></i> Form Lengkap
                                             </span>
+                                        @elseif(!$item->isCompletedStatus() && $jadwal->isActiveStatus())
+                                            @if($currentVisit && $currentVisit->id === $item->id && $item->isPendingStatus())
+                                                <button class="btn btn-sm btn-primary checkin-btn" data-jadwal-klien-id="{{ $item->id }}">
+                                                    <i class="fas fa-check-in"></i> Check-In
+                                                </button>
+                                            @elseif($currentVisit && $currentVisit->id === $item->id && ($item->isActiveStatus() || $item->isCheckingOutStatus()))
+                                                <a href="{{ route('sales.pjp.form', [$jadwal->id, $item->id]) }}" class="btn btn-sm btn-success">
+                                                    <i class="fas fa-clipboard-list"></i> Lengkapi Form
+                                                </a>
+                                            @endif
                                         @endif
                                     </div>
                                 </div>
@@ -227,6 +223,8 @@
     document.querySelectorAll('.checkin-btn').forEach(btn => {
         btn.addEventListener('click', function() {
             const jadwalKlienId = this.dataset.jadwalKlienId;
+            const checkinUrlTemplate = @json(route('sales.pjp.checkin-klien', ['jadwalKlien' => '__JADWAL_KLIEN__']));
+            const checkinUrl = checkinUrlTemplate.replace('__JADWAL_KLIEN__', jadwalKlienId);
             
             if (!navigator.geolocation) {
                 alert('Browser Anda tidak mendukung GPS');
@@ -238,7 +236,7 @@
 
             navigator.geolocation.getCurrentPosition(
                 function(position) {
-                    fetch(`{{ url('sales/pjp/klien') }}/${jadwalKlienId}/checkin`, {
+                    fetch(checkinUrl, {
                         method: 'POST',
                         headers: {
                             'X-CSRF-TOKEN': '{{ csrf_token() }}',
@@ -271,35 +269,6 @@
         });
     });
 
-    // Check-Out from Klien
-    document.querySelectorAll('.checkout-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const jadwalKlienId = this.dataset.jadwalKlienId;
-            const hasil = prompt('Hasil kunjungan (opsional):');
-
-            if (hasil !== null) {
-                fetch(`{{ url('sales/pjp/klien') }}/${jadwalKlienId}/checkout`, {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        hasil_kunjungan: hasil,
-                    }),
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        alert(data.message);
-                        location.reload();
-                    } else {
-                        alert('Error: ' + data.error);
-                    }
-                });
-            }
-        });
-    });
 </script>
 @endpush
 

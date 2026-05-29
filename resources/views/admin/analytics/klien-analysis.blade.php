@@ -42,10 +42,10 @@
     <!-- Export Button -->
     <div class="row mb-3">
         <div class="col-md-12">
-            <a href="{{ route('admin.reports.export-klien-analysis', request()->only(['start_date', 'end_date'])) }}" class="btn btn-success">
+            <a href="{{ route(auth()->user()?->isManager() ? 'manager.reports.export-klien-analysis' : 'admin.reports.export-klien-analysis', request()->only(['start_date', 'end_date'])) }}" class="btn btn-success">
                 <i class="fas fa-download"></i> Download Excel
             </a>
-            <a href="{{ route('admin.reports.export-klien-analysis', array_merge(request()->only(['start_date', 'end_date']), ['format' => 'pdf'])) }}" class="btn btn-danger">
+            <a href="{{ route(auth()->user()?->isManager() ? 'manager.reports.export-klien-analysis' : 'admin.reports.export-klien-analysis', array_merge(request()->only(['start_date', 'end_date']), ['format' => 'pdf'])) }}" class="btn btn-danger">
                 <i class="fas fa-file-pdf"></i> Download PDF
             </a>
         </div>

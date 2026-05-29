@@ -89,6 +89,64 @@
             flex: 0 0 auto;
         }
 
+        .tracking-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            min-height: 38px;
+            max-width: 260px;
+            padding: 0.4rem 0.75rem;
+            border-radius: 999px;
+            border: 1px solid transparent;
+            font-size: 0.78rem;
+            line-height: 1.2;
+            background: #f8fafc;
+            color: #334155;
+        }
+
+        .tracking-status i {
+            font-size: 0.9rem;
+        }
+
+        .tracking-status__text {
+            display: inline-block;
+            max-width: 180px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .tracking-status__meta {
+            display: block;
+            font-size: 0.68rem;
+            opacity: 0.82;
+            line-height: 1.1;
+        }
+
+        .tracking-status--active {
+            background: #ecfdf5;
+            color: #047857;
+            border-color: #a7f3d0;
+        }
+
+        .tracking-status--inactive {
+            background: #f8fafc;
+            color: #475569;
+            border-color: #cbd5e1;
+        }
+
+        .tracking-status--warning {
+            background: #fffbeb;
+            color: #b45309;
+            border-color: #fde68a;
+        }
+
+        .tracking-status--error {
+            background: #fef2f2;
+            color: #b91c1c;
+            border-color: #fecaca;
+        }
+
         .sales-content {
             padding: 1rem;
             max-width: 1180px;
@@ -238,8 +296,16 @@
                 border-left-color: #2563eb;
             }
 
-            .sales-brand-subtitle {
-                max-width: none;
+        .sales-brand-subtitle {
+            max-width: none;
+        }
+
+            .tracking-status {
+                max-width: 360px;
+            }
+
+            .tracking-status__text {
+                max-width: 260px;
             }
         }
     </style>
@@ -261,6 +327,13 @@
                 </div>
 
                 <div class="sales-user-actions">
+                    <div id="trackingStatus" class="tracking-status tracking-status--inactive" role="status" aria-live="polite">
+                        <i class="fas fa-location-crosshairs"></i>
+                        <div>
+                            <span class="tracking-status__text">Tracking nonaktif</span>
+                            <span class="tracking-status__meta">Menunggu check-in absensi</span>
+                        </div>
+                    </div>
                     <span class="badge-role d-none d-sm-inline-flex">{{ auth()->user()->getRoleLabel() }}</span>
                     <form method="POST" action="{{ route('logout') }}" class="m-0">
                         @csrf
@@ -322,6 +395,205 @@
             lastTouchEnd = now;
         }, false);
     </script>
+
+    @auth
+        @if(auth()->user()->isSales())
+            <script>
+                (function() {
+                    const locationUpdateUrl = {{ route('api.location.update') }};
+                const attendanceStatusUrl = {{ route('sales.attendance.status') }};
+                    const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+                    const csrfToken = csrfMeta ? csrfMeta.content : null;
+                    const updateIntervalMs = 60000;
+                    let trackingTimer = null;
+                    let isSendingLocation = false;
+                    let lastUpdateText = 'Belum ada update';
+                    let currentTrackingState = 'inactive';
+
+                    function updateTrackingStatus(state, text, meta) {
+                        currentTrackingState = state;
+
+                        const statusEl = document.getElementById('trackingStatus');
+                        const textEl = statusEl?.querySelector('.tracking-status__text');
+                        const metaEl = statusEl?.querySelector('.tracking-status__meta');
+
+                        if (!statusEl || !textEl || !metaEl) {
+                            return;
+                        }
+
+                        statusEl.className = `tracking-status tracking-status--${state}`;
+                        textEl.textContent = text;
+                        metaEl.textContent = meta || lastUpdateText;
+                    }
+
+                    function setLastUpdateText(text) {
+                        lastUpdateText = text;
+
+                        const statusEl = document.getElementById('trackingStatus');
+                        const metaEl = statusEl?.querySelector('.tracking-status__meta');
+
+                        if (metaEl) {
+                            metaEl.textContent = text;
+                        }
+                    }
+
+                    function formatTime(date = new Date()) {
+                        return date.toLocaleTimeString('id-ID', {
+                            hour: '2-digit',
+                            minute: '2-digit'
+                        });
+                    }
+
+                    function handleLocationError(error) {
+                        if (!error) {
+                            updateTrackingStatus('error', 'Tracking gagal', 'Gagal membaca GPS');
+                            return;
+                        }
+
+                        if (error.code === 1) {
+                            updateTrackingStatus('warning', 'GPS ditolak', 'Izinkan akses lokasi untuk tracking');
+                            return;
+                        }
+
+                        if (error.code === 2) {
+                            updateTrackingStatus('warning', 'GPS tidak tersedia', 'Perangkat belum memberikan lokasi');
+                            return;
+                        }
+
+                        if (error.code === 3) {
+                            updateTrackingStatus('warning', 'GPS timeout', 'Lokasi tidak didapat tepat waktu');
+                            return;
+                        }
+
+                        updateTrackingStatus('error', 'Tracking gagal', error.message || 'Terjadi kesalahan GPS');
+                    }
+
+                    function shouldTrackLocation() {
+                        return fetch(attendanceStatusUrl, {
+                            headers: {
+                                'Accept': 'application/json'
+                            },
+                            credentials: 'same-origin'
+                        })
+                            .then(response => response.ok ? response.json() : null)
+                            .then(data => {
+                                if (!data) {
+                                    updateTrackingStatus('error', 'Status tracking tidak terbaca', 'Coba muat ulang halaman');
+                                    return false;
+                                }
+
+                                if (!data.checked_in) {
+                                    updateTrackingStatus('inactive', 'Tracking nonaktif', 'Belum check-in absensi');
+                                    return false;
+                                }
+
+                                if (data.checked_out) {
+                                    updateTrackingStatus('inactive', 'Tracking nonaktif', 'Sudah checkout absensi');
+                                    return false;
+                                }
+
+                                updateTrackingStatus('active', 'Tracking aktif', `Update terakhir: ${lastUpdateText}`);
+                                return true;
+                            })
+                            .catch(() => {
+                                updateTrackingStatus('error', 'Status tracking gagal dimuat', 'Periksa koneksi jaringan');
+                                return false;
+                            });
+                    }
+
+                    function sendCurrentLocation() {
+                        if (isSendingLocation || !navigator.geolocation || !csrfToken) {
+                            return;
+                        }
+
+                        isSendingLocation = true;
+                        updateTrackingStatus('warning', 'Mengirim lokasi...', lastUpdateText);
+
+                        navigator.geolocation.getCurrentPosition(
+                            function(position) {
+                                fetch(locationUpdateUrl, {
+                                    method: 'POST',
+                                    headers: {
+                                        'Accept': 'application/json',
+                                        'Content-Type': 'application/json',
+                                        'X-CSRF-TOKEN': csrfToken
+                                    },
+                                    credentials: 'same-origin',
+                                    body: JSON.stringify({
+                                        latitude: position.coords.latitude,
+                                        longitude: position.coords.longitude,
+                                        accuracy: position.coords.accuracy
+                                    })
+                                })
+                                    .then(async function(response) {
+                                        const data = await response.json().catch(() => ({}));
+
+                                        if (!response.ok || !data.success) {
+                                            const message = data.message || 'Gagal mengirim lokasi';
+
+                                            if (response.status === 400 && /tracking is only active after attendance check-in/i.test(message)) {
+                                                updateTrackingStatus('inactive', 'Tracking nonaktif', 'Belum check-in absensi');
+                                                return;
+                                            }
+
+                                            updateTrackingStatus('error', 'Lokasi gagal dikirim', message);
+                                            setLastUpdateText(`Gagal ${formatTime()}`);
+                                            return;
+                                        }
+
+                                        setLastUpdateText(`Update terakhir: ${formatTime()}`);
+                                        updateTrackingStatus('active', 'Tracking aktif', lastUpdateText);
+                                    })
+                                    .catch(function() {
+                                        setLastUpdateText(`Gagal ${formatTime()}`);
+                                        updateTrackingStatus('error', 'Lokasi gagal dikirim', 'Periksa koneksi jaringan');
+                                    })
+                                    .finally(function() {
+                                        isSendingLocation = false;
+                                    });
+                            },
+                            function(error) {
+                                handleLocationError(error);
+                                isSendingLocation = false;
+                            },
+                            {
+                                enableHighAccuracy: true,
+                                timeout: 15000,
+                                maximumAge: 30000
+                            }
+                        );
+                    }
+
+                    function refreshTrackingState() {
+                        shouldTrackLocation().then(function(canTrack) {
+                            if (!canTrack) {
+                                if (trackingTimer) {
+                                    clearInterval(trackingTimer);
+                                    trackingTimer = null;
+                                }
+                                return;
+                            }
+
+                            sendCurrentLocation();
+
+                            if (!trackingTimer) {
+                                trackingTimer = setInterval(sendCurrentLocation, updateIntervalMs);
+                            }
+                        });
+                    }
+
+                    updateTrackingStatus('inactive', 'Tracking nonaktif', 'Memeriksa status absensi...');
+                    document.addEventListener('DOMContentLoaded', refreshTrackingState);
+                    document.addEventListener('visibilitychange', function() {
+                        if (!document.hidden) {
+                            refreshTrackingState();
+                        }
+                    });
+                    window.addEventListener('focus', refreshTrackingState);
+                })();
+            </script>
+        @endif
+    @endauth
 
     @yield('js')
     @stack('scripts')

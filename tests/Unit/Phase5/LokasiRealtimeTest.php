@@ -188,7 +188,7 @@ class LokasiRealtimeTest extends TestCase
      */
     public function test_latitude_must_be_between_minus_90_and_90()
     {
-        $this->expectException(\Illuminate\Database\QueryException::class);
+        $this->expectException(\Illuminate\Validation\ValidationException::class);
 
         LokasiRealtime::create([
             'user_id' => $this->salesUser->id,
@@ -203,7 +203,7 @@ class LokasiRealtimeTest extends TestCase
      */
     public function test_longitude_must_be_between_minus_180_and_180()
     {
-        $this->expectException(\Illuminate\Database\QueryException::class);
+        $this->expectException(\Illuminate\Validation\ValidationException::class);
 
         LokasiRealtime::create([
             'user_id' => $this->salesUser->id,

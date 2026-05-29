@@ -32,6 +32,17 @@
                             </select>
                         </div>
                         <div class="col-md-2">
+                            <label class="form-label">Wilayah</label>
+                            <select name="wilayah_id" class="form-select">
+                                <option value="">-- Semua --</option>
+                                @foreach($wilayah as $item)
+                                    <option value="{{ $item->id }}" {{ request('wilayah_id') == $item->id ? 'selected' : '' }}>
+                                        {{ $item->nama_wilayah }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-2">
                             <label class="form-label">Hasil</label>
                             <select name="hasil_tipe" class="form-select">
                                 <option value="">-- Semua --</option>
@@ -40,6 +51,13 @@
                                         {{ $label }}
                                     </option>
                                 @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">Basis Tanggal</label>
+                            <select name="date_basis" class="form-select">
+                                <option value="visit_date" {{ $dateBasis === 'visit_date' ? 'selected' : '' }}>Tanggal Kunjungan</option>
+                                <option value="upload_date" {{ $dateBasis === 'upload_date' ? 'selected' : '' }}>Tanggal Upload</option>
                             </select>
                         </div>
                         <div class="col-md-2">
@@ -75,6 +93,9 @@
                 <input type="hidden" name="start_date" value="{{ request('start_date') }}">
                 <input type="hidden" name="end_date" value="{{ request('end_date') }}">
                 <input type="hidden" name="user_id" value="{{ request('user_id') }}">
+                <input type="hidden" name="wilayah_id" value="{{ request('wilayah_id') }}">
+                <input type="hidden" name="hasil_tipe" value="{{ request('hasil_tipe') }}">
+                <input type="hidden" name="date_basis" value="{{ request('date_basis', $dateBasis ?? 'visit_date') }}">
                 <button type="submit" class="btn btn-outline-success">
                     <i class="fas fa-download"></i> Download ZIP
                 </button>
@@ -107,13 +128,18 @@
 
                             <!-- Details -->
                             <div class="col-md-6">
+                                @php
+                                    $displayDate = $dateBasis === 'upload_date'
+                                        ? $photo->created_at
+                                        : ($photo->jadwalKunjungan->tanggal ?? $photo->created_at);
+                                @endphp
                                 <p>
                                     <strong>{{ $photo->klien->nama_klien }}</strong><br>
                                     <small class="text-muted">{{ $photo->klien->alamat }}</small>
                                 </p>
                                 <p>
                                     <strong>Sales:</strong> {{ $photo->jadwalKunjungan->user->name }}<br>
-                                    <strong>Tanggal:</strong> {{ $photo->created_at->format('d M Y') }}<br>
+                                    <strong>{{ $dateBasis === 'upload_date' ? 'Tanggal Upload' : 'Tanggal Kunjungan' }}:</strong> {{ $displayDate->format('d M Y') }}<br>
                                     <strong>Hasil:</strong> 
                                     <span class="badge bg-info">{{ $photo->getHasilTipeLabel() }}</span>
                                 </p>
@@ -123,11 +149,11 @@
                                     </p>
                                 @endif
                                 <div>
-                                    <a href="{{ route('admin.photo-gallery.lightbox', $photo->id) }}" class="btn btn-sm btn-primary">
+                                    <a href="{{ route('admin.photo-gallery.lightbox', ['jadwalKlien' => $photo->id, 'date_basis' => request('date_basis', $dateBasis ?? 'visit_date')]) }}" class="btn btn-sm btn-primary">
                                         <i class="fas fa-expand"></i> Lihat Detail
                                     </a>
                                     @if($photo->foto_checkin)
-                                        <a href="{{ route('admin.photo-gallery.download', [$photo->id, 'checkin']) }}" class="btn btn-sm btn-outline-secondary">
+                                        <a href="{{ route('admin.photo-gallery.download', ['jadwalKlien' => $photo->id, 'type' => 'checkin', 'date_basis' => request('date_basis', $dateBasis ?? 'visit_date')]) }}" class="btn btn-sm btn-outline-secondary">
                                             <i class="fas fa-download"></i> DL Check-in
                                         </a>
                                     @endif

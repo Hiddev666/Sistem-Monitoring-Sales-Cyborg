@@ -57,6 +57,20 @@ class ManagerReportScopeTest extends TestCase
         $this->assertStringContainsString('.pdf', $managerResponse->headers->get('content-disposition'));
     }
 
+    public function test_manager_without_wilayah_sees_safe_empty_scope(): void
+    {
+        $manager = $this->createUserWithRole('manager');
+        $sales = $this->createUserWithRole('sales');
+        $wilayah = Wilayah::factory()->create();
+        $this->createCompletedVisit($sales, $wilayah);
+
+        $response = $this->actingAs($manager)->get(route('admin.analytics.sales-performance'));
+
+        $response->assertOk();
+        $response->assertSeeText('Tidak ada data');
+        $response->assertDontSee($sales->name);
+    }
+
     private function createScopedUsers(): array
     {
         $ownWilayah = Wilayah::factory()->create(['nama_wilayah' => 'Wilayah Manager']);

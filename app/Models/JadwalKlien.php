@@ -12,6 +12,7 @@ class JadwalKlien extends Model
 
     public const STATUS_PENDING = 'pending';
     public const STATUS_ACTIVE = 'active';
+    public const STATUS_ACTIVE_LEGACY = 'aktif';
     public const STATUS_CHECKING_OUT = 'checking_out';
     public const STATUS_COMPLETED = 'completed';
     public const STATUS_SKIPPED = 'skipped';
@@ -99,9 +100,55 @@ class JadwalKlien extends Model
      */
     public function isCurrent()
     {
-        return $this->status === self::STATUS_ACTIVE ||
-               ($this->status === self::STATUS_PENDING && !self::where('jadwal_kunjungan_id', $this->jadwal_kunjungan_id)
-                   ->where('status', self::STATUS_ACTIVE)->exists());
+        return $this->isActiveStatus() ||
+               ($this->isPendingStatus() && !self::where('jadwal_kunjungan_id', $this->jadwal_kunjungan_id)
+                   ->whereIn('status', [self::STATUS_ACTIVE, self::STATUS_ACTIVE_LEGACY])->exists());
+    }
+
+    public function isPendingStatus(): bool
+    {
+        return $this->status === self::STATUS_PENDING;
+    }
+
+    public function isActiveStatus(): bool
+    {
+        return in_array($this->status, [self::STATUS_ACTIVE, self::STATUS_ACTIVE_LEGACY], true);
+    }
+
+    public function isCheckingOutStatus(): bool
+    {
+        return $this->status === self::STATUS_CHECKING_OUT;
+    }
+
+    public function isCompletedStatus(): bool
+    {
+        return $this->status === self::STATUS_COMPLETED;
+    }
+
+    public function isSkippedStatus(): bool
+    {
+        return $this->status === self::STATUS_SKIPPED;
+    }
+
+    public function isEditableStatus(): bool
+    {
+        return in_array($this->status, [
+            self::STATUS_ACTIVE,
+            self::STATUS_ACTIVE_LEGACY,
+            self::STATUS_CHECKING_OUT,
+        ], true);
+    }
+
+    public function getStatusLabelAttribute(): string
+    {
+        return match ($this->status) {
+            self::STATUS_PENDING => 'Menunggu',
+            self::STATUS_ACTIVE, self::STATUS_ACTIVE_LEGACY => 'Aktif',
+            self::STATUS_CHECKING_OUT => 'Checkout',
+            self::STATUS_COMPLETED => 'Selesai',
+            self::STATUS_SKIPPED => 'Dilewati',
+            default => ucfirst((string) $this->status),
+        };
     }
 
     /**
@@ -142,7 +189,7 @@ class JadwalKlien extends Model
         if (!$this->foto_checkin) {
             return null;
         }
-        return \Illuminate\Support\Facades\Storage::url($this->foto_checkin);
+        return route('visit-photo.preview', [$this->id, 'checkin']);
     }
 
     /**
@@ -153,7 +200,7 @@ class JadwalKlien extends Model
         if (!$this->foto_checkout) {
             return null;
         }
-        return \Illuminate\Support\Facades\Storage::url($this->foto_checkout);
+        return route('visit-photo.preview', [$this->id, 'checkout']);
     }
 
     /**
@@ -164,7 +211,7 @@ class JadwalKlien extends Model
         if (!$this->tanda_tangan) {
             return null;
         }
-        return \Illuminate\Support\Facades\Storage::url($this->tanda_tangan);
+        return route('visit-photo.preview', [$this->id, 'signature']);
     }
 
     /**
@@ -191,8 +238,15 @@ class JadwalKlien extends Model
         $this->lat_checkout = $data['lat_checkout'] ?? $this->lat_checkout;
         $this->lng_checkout = $data['lng_checkout'] ?? $this->lng_checkout;
         $this->accuracy_checkout = $data['accuracy_checkout'] ?? $this->accuracy_checkout;
+        $this->waktu_checkout = now()->format('H:i:s');
         $this->waktu_form_selesai = now();
         $this->status = self::STATUS_COMPLETED;
+
+        if ($this->waktu_checkin) {
+            $checkin = strtotime($this->waktu_checkin);
+            $checkout = strtotime($this->waktu_checkout);
+            $this->durasi_kunjungan = max(0, ($checkout - $checkin) / 60);
+        }
 
         return $this->save();
     }

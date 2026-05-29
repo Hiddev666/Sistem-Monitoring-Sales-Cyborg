@@ -7,6 +7,9 @@
         <div class="col-md-12">
             <h2><i class="fas fa-chart-bar"></i> Statistik Galeri Foto</h2>
             <p class="text-muted">Analisis komprehensif koleksi foto kunjungan</p>
+            <span class="badge bg-secondary">
+                Basis tanggal: {{ $dateBasis === 'upload_date' ? 'Tanggal Upload' : 'Tanggal Kunjungan' }}
+            </span>
         </div>
     </div>
 

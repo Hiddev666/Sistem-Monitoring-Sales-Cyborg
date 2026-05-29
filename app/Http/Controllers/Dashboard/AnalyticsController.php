@@ -27,9 +27,9 @@ class AnalyticsController extends Controller
 
         $stats = [
             'total_schedules' => $this->scopeSchedules(JadwalKunjungan::query(), $wilayahScope)->whereBetween('tanggal', [$startDate, $endDate])->count(),
-            'completed_visits' => $this->scopeVisits(JadwalKlien::query(), $wilayahScope)->whereBetween('jadwal_klien.created_at', [$startDate, $endDate])->where('jadwal_klien.status', 'completed')->count(),
-            'total_visits' => $this->scopeVisits(JadwalKlien::query(), $wilayahScope)->whereBetween('jadwal_klien.created_at', [$startDate, $endDate])->count(),
-            'total_revenue' => $this->scopeVisits(JadwalKlien::query(), $wilayahScope)->whereBetween('jadwal_klien.created_at', [$startDate, $endDate])->sum('jadwal_klien.nominal_transaksi') ?? 0,
+            'completed_visits' => $this->scopeVisitDateRange($this->scopeVisits(JadwalKlien::query(), $wilayahScope), $startDate, $endDate)->where('jadwal_klien.status', 'completed')->count(),
+            'total_visits' => $this->scopeVisitDateRange($this->scopeVisits(JadwalKlien::query(), $wilayahScope), $startDate, $endDate)->count(),
+            'total_revenue' => $this->scopeVisitDateRange($this->scopeVisits(JadwalKlien::query(), $wilayahScope), $startDate, $endDate)->sum('jadwal_klien.nominal_transaksi') ?? 0,
             'avg_visit_duration' => $this->getAverageVisitDuration($startDate, $endDate, $wilayahScope),
             'sales_reps' => User::role('sales')->when($wilayahScope !== null, fn ($q) => $q->where('wilayah_id', $wilayahScope))->count(),
             'total_klien' => Klien::query()->when($wilayahScope !== null, fn ($q) => $q->where('wilayah_id', $wilayahScope))->count(),
@@ -37,7 +37,9 @@ class AnalyticsController extends Controller
 
         // Visit results breakdown
         $resultsBreakdown = $this->scopeVisits(JadwalKlien::query(), $wilayahScope)
-            ->whereBetween('jadwal_klien.created_at', [$startDate, $endDate])
+            ->whereHas('jadwalKunjungan', function ($query) use ($startDate, $endDate) {
+                $query->whereBetween('tanggal', [$startDate, $endDate]);
+            })
             ->where('jadwal_klien.status', 'completed')
             ->groupBy('hasil_tipe')
             ->select('hasil_tipe', DB::raw('COUNT(*) as count'))
@@ -81,12 +83,14 @@ class AnalyticsController extends Controller
         $endDate = $request->get('end_date', Carbon::now()->toDateString());
         $wilayahId = $request->get('wilayah_id');
         $wilayahScope = $this->managerWilayahScope();
-        $wilayahId = $wilayahScope ?? $wilayahId;
+        if ($wilayahScope !== null) {
+            $wilayahId = $wilayahScope;
+        }
 
         $query = User::role('sales')
             ->with(['jadwalKunjungan', 'absensi']);
 
-        if ($wilayahId) {
+        if ($wilayahId !== null) {
             $query->where('wilayah_id', $wilayahId);
         }
 
@@ -159,16 +163,22 @@ class AnalyticsController extends Controller
             ->get()
             ->map(function ($klien) use ($startDate, $endDate) {
                 $visits = JadwalKlien::where('klien_id', $klien->id)
-                    ->whereBetween('created_at', [$startDate, $endDate])
+                    ->whereHas('jadwalKunjungan', function ($query) use ($startDate, $endDate) {
+                        $query->whereBetween('tanggal', [$startDate, $endDate]);
+                    })
                     ->count();
 
                 $purchases = JadwalKlien::where('klien_id', $klien->id)
                     ->where('hasil_tipe', 'pembelian')
-                    ->whereBetween('created_at', [$startDate, $endDate])
+                    ->whereHas('jadwalKunjungan', function ($query) use ($startDate, $endDate) {
+                        $query->whereBetween('tanggal', [$startDate, $endDate]);
+                    })
                     ->count();
 
                 $revenue = JadwalKlien::where('klien_id', $klien->id)
-                    ->whereBetween('created_at', [$startDate, $endDate])
+                    ->whereHas('jadwalKunjungan', function ($query) use ($startDate, $endDate) {
+                        $query->whereBetween('tanggal', [$startDate, $endDate]);
+                    })
                     ->sum('nominal_transaksi') ?? 0;
 
                 return [
@@ -251,7 +261,9 @@ class AnalyticsController extends Controller
     private function getAverageVisitDuration($startDate, $endDate, ?int $wilayahId = null)
     {
         $avg = $this->scopeVisits(JadwalKlien::query(), $wilayahId)
-            ->whereBetween('jadwal_klien.created_at', [$startDate, $endDate])
+            ->whereHas('jadwalKunjungan', function ($query) use ($startDate, $endDate) {
+                $query->whereBetween('tanggal', [$startDate, $endDate]);
+            })
             ->where('jadwal_klien.status', 'completed')
             ->avg('jadwal_klien.durasi_kunjungan');
 
@@ -293,19 +305,19 @@ class AnalyticsController extends Controller
     private function getDailyVisitsTrend($startDate, $endDate, ?int $wilayahId = null)
     {
         return DB::table('jadwal_klien')
+            ->join('jadwal_kunjungan', 'jadwal_klien.jadwal_kunjungan_id', '=', 'jadwal_kunjungan.id')
             ->when($wilayahId !== null, function ($query) use ($wilayahId) {
-                $query->join('jadwal_kunjungan', 'jadwal_klien.jadwal_kunjungan_id', '=', 'jadwal_kunjungan.id')
-                    ->join('users', 'jadwal_kunjungan.user_id', '=', 'users.id')
+                $query->join('users', 'jadwal_kunjungan.user_id', '=', 'users.id')
                     ->where('users.wilayah_id', $wilayahId);
             })
             ->select(
-                DB::raw('DATE(jadwal_klien.created_at) as date'),
+                DB::raw('DATE(jadwal_kunjungan.tanggal) as date'),
                 DB::raw('COUNT(*) as visits'),
                 DB::raw('SUM(CASE WHEN jadwal_klien.status = "completed" THEN 1 ELSE 0 END) as completed'),
                 DB::raw('SUM(jadwal_klien.nominal_transaksi) as revenue')
             )
-            ->whereBetween('jadwal_klien.created_at', [$startDate, $endDate])
-            ->groupBy(DB::raw('DATE(jadwal_klien.created_at)'))
+            ->whereBetween('jadwal_kunjungan.tanggal', [$startDate, $endDate])
+            ->groupBy(DB::raw('DATE(jadwal_kunjungan.tanggal)'))
             ->orderBy('date')
             ->get();
     }
@@ -317,8 +329,9 @@ class AnalyticsController extends Controller
     {
         return DB::table('jadwal_klien')
             ->join('klien', 'jadwal_klien.klien_id', '=', 'klien.id')
+            ->join('jadwal_kunjungan', 'jadwal_klien.jadwal_kunjungan_id', '=', 'jadwal_kunjungan.id')
             ->when($wilayahId !== null, fn ($q) => $q->where('klien.wilayah_id', $wilayahId))
-            ->whereBetween('jadwal_klien.created_at', [$startDate, $endDate])
+            ->whereBetween('jadwal_kunjungan.tanggal', [$startDate, $endDate])
             ->select(
                 'klien.id',
                 'klien.nama_klien',
@@ -379,6 +392,13 @@ class AnalyticsController extends Controller
     {
         return $query->when($wilayahId !== null, function ($query) use ($wilayahId) {
             $query->whereHas('jadwalKunjungan.user', fn ($userQuery) => $userQuery->where('wilayah_id', $wilayahId));
+        });
+    }
+
+    private function scopeVisitDateRange($query, string $startDate, string $endDate)
+    {
+        return $query->whereHas('jadwalKunjungan', function ($query) use ($startDate, $endDate) {
+            $query->whereBetween('tanggal', [$startDate, $endDate]);
         });
     }
 }

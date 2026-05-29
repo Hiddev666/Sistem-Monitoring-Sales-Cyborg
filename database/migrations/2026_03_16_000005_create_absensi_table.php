@@ -20,13 +20,13 @@ return new class extends Migration
             $table->time('waktu_masuk')->nullable();
             $table->decimal('lat_masuk', 10, 7)->nullable();
             $table->decimal('lng_masuk', 11, 7)->nullable();
-            $table->decimal('accuracy_masuk', 5, 2)->nullable(); // GPS accuracy in meters
+            $table->decimal('accuracy_masuk', 8, 2)->nullable(); // GPS accuracy in meters
             
             // Check-out fields
             $table->time('waktu_keluar')->nullable();
             $table->decimal('lat_keluar', 10, 7)->nullable();
             $table->decimal('lng_keluar', 11, 7)->nullable();
-            $table->decimal('accuracy_keluar', 5, 2)->nullable();
+            $table->decimal('accuracy_keluar', 8, 2)->nullable();
             
             // Calculated fields
             $table->integer('total_jam')->nullable(); // Duration in minutes

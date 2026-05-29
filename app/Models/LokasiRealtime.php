@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\Validator;
 
 class LokasiRealtime extends Model
 {
@@ -35,6 +37,20 @@ class LokasiRealtime extends Model
         'akurasi_meter' => 'decimal:2',
         'recorded_at' => 'datetime',
     ];
+
+    protected static function booted(): void
+    {
+        static::saving(function (self $location): void {
+            $validator = Validator::make($location->getAttributes(), [
+                'latitude' => ['required', 'numeric', 'between:-90,90'],
+                'longitude' => ['required', 'numeric', 'between:-180,180'],
+            ]);
+
+            if ($validator->fails()) {
+                throw ValidationException::withMessages($validator->errors()->toArray());
+            }
+        });
+    }
 
     /**
      * Get the user that owns the location.

@@ -34,10 +34,12 @@ class SalesPJPController extends Controller
             ->ordered()
             ->with('klien')
             ->get();
+        $currentVisit = $jadwal->getCurrentVisit();
 
         return view('sales.pjp.today', [
             'jadwal' => $jadwal,
             'klien' => $klien,
+            'currentVisit' => $currentVisit,
         ]);
     }
 
@@ -58,10 +60,12 @@ class SalesPJPController extends Controller
             ->ordered()
             ->with('klien')
             ->get();
+        $currentVisit = $jadwal->getCurrentVisit();
 
         return view('sales.pjp.show', [
             'jadwal' => $jadwal,
             'klien' => $klien,
+            'currentVisit' => $currentVisit,
         ]);
     }
 
@@ -77,7 +81,7 @@ class SalesPJPController extends Controller
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
-        if ($jadwal->status !== JadwalKunjungan::STATUS_PENDING) {
+        if (!$jadwal->isPendingStatus()) {
             return response()->json([
                 'error' => 'Jadwal sudah dimulai atau selesai'
             ], 400);
@@ -114,9 +118,22 @@ class SalesPJPController extends Controller
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
-        if ($jadwal->status !== JadwalKunjungan::STATUS_ACTIVE) {
+        if (!$jadwal->isActiveStatus()) {
             return response()->json([
                 'error' => 'Jadwal harus dalam status aktif'
+            ], 400);
+        }
+
+        $hasUnfinishedVisits = $jadwal->jadwalKlien()
+            ->whereNotIn('status', [
+                JadwalKlien::STATUS_COMPLETED,
+                JadwalKlien::STATUS_SKIPPED,
+            ])
+            ->exists();
+
+        if ($hasUnfinishedVisits) {
+            return response()->json([
+                'error' => 'Selesaikan semua form kunjungan sebelum mengakhiri perjalanan'
             ], 400);
         }
 
@@ -153,10 +170,40 @@ class SalesPJPController extends Controller
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
+        if (!$jadwal->isActiveStatus()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Jadwal harus aktif sebelum check-in.',
+            ], 400);
+        }
+
+        if ($jadwalKlien->isCompletedStatus() || $jadwalKlien->isSkippedStatus()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Klien ini sudah selesai atau dilewati.',
+            ], 400);
+        }
+
+        $currentVisit = $jadwal->getCurrentVisit();
+
+        if (!$currentVisit) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Tidak ada klien yang dapat dikunjungi saat ini.',
+            ], 400);
+        }
+
+        if ($currentVisit->id !== $jadwalKlien->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Ikuti urutan PJP. Klien yang bisa di-check-in saat ini adalah klien urutan ' . $currentVisit->urutan . '.',
+            ], 400);
+        }
+
         $validated = $request->validate([
             'latitude' => 'required|numeric|between:-90,90',
             'longitude' => 'required|numeric|between:-180,180',
-            'accuracy' => 'nullable|numeric|min:0',
+            'accuracy' => 'nullable|numeric|min:0|max:999999.99',
         ]);
 
         // Validate GPS proximity
@@ -215,31 +262,37 @@ class SalesPJPController extends Controller
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
-        $validated = $request->validate([
-            'hasil_kunjungan' => 'nullable|string|max:1000',
-            'keterangan' => 'nullable|string|max:500',
-        ]);
-
-        try {
-            $jadwalKlien->markCompleted(
-                $validated['hasil_kunjungan'] ?? null,
-                $validated['keterangan'] ?? null
-            );
-
+        if ($jadwalKlien->isCompletedStatus()) {
             return response()->json([
                 'success' => true,
-                'message' => 'Check-out berhasil!',
-                'data' => [
-                    'id' => $jadwalKlien->id,
-                    'status' => $jadwalKlien->status,
-                    'durasi' => $jadwalKlien->durasi_kunjungan . ' menit',
-                ],
+                'message' => 'Kunjungan sudah selesai.',
             ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'error' => 'Terjadi kesalahan: ' . $e->getMessage()
-            ], 500);
         }
+
+        $currentVisit = $jadwal->getCurrentVisit();
+
+        if (!$currentVisit || $currentVisit->id !== $jadwalKlien->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Ikuti urutan PJP. Klien yang bisa di-check-out saat ini adalah klien urutan ' . ($currentVisit?->urutan ?? '-'),
+            ], 400);
+        }
+
+        if (!($jadwalKlien->isActiveStatus() || $jadwalKlien->isCheckingOutStatus())) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Klien harus sudah check-in sebelum checkout',
+            ], 400);
+        }
+
+        $jadwalKlien->status = JadwalKlien::STATUS_CHECKING_OUT;
+        $jadwalKlien->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Lanjutkan checkout melalui form kunjungan.',
+            'redirect' => route('sales.pjp.form', [$jadwal->id, $jadwalKlien->id]),
+        ]);
     }
 
     /**
@@ -254,13 +307,7 @@ class SalesPJPController extends Controller
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
-        $currentKlien = $jadwal->jadwalKlien()
-            ->where(function ($query) {
-                $query->where('status', JadwalKlien::STATUS_ACTIVE)
-                    ->orWhere('status', JadwalKlien::STATUS_PENDING);
-            })
-            ->ordered()
-            ->first();
+        $currentKlien = $jadwal->getCurrentVisit();
 
         if (!$currentKlien) {
             return response()->json([

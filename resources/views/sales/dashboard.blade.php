@@ -85,9 +85,9 @@
                         <div class="d-flex justify-content-between align-items-start mb-3">
                             <div>
                                 <div class="mb-2">
-                                    @if($jadwal->status === \App\Models\JadwalKunjungan::STATUS_PENDING)
+                                    @if($jadwal->isPendingStatus())
                                         <span class="badge bg-warning text-dark">Menunggu Dimulai</span>
-                                    @elseif($jadwal->status === \App\Models\JadwalKunjungan::STATUS_ACTIVE)
+                                    @elseif($jadwal->isActiveStatus())
                                         <span class="badge bg-info">Perjalanan Berlangsung</span>
                                     @else
                                         <span class="badge bg-success">Selesai</span>
@@ -121,9 +121,9 @@
                                             <td>{{ $item->urutan }}</td>
                                             <td>{{ $item->klien->nama_klien }}</td>
                                             <td>
-                                                @if($item->status === \App\Models\JadwalKlien::STATUS_COMPLETED)
+                                                @if($item->isCompletedStatus())
                                                     <span class="badge bg-success">Selesai</span>
-                                                @elseif($item->status === \App\Models\JadwalKlien::STATUS_ACTIVE)
+                                                @elseif($item->isActiveStatus())
                                                     <span class="badge bg-info">Aktif</span>
                                                 @else
                                                     <span class="badge bg-secondary">Menunggu</span>

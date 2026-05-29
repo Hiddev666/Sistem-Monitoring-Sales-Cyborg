@@ -34,8 +34,7 @@ class VisitFormController extends Controller
             return abort(404, 'Klien not found');
         }
 
-        // Verify status is appropriate for form
-        if (!in_array($jadwalKlien->status, ['active', 'checking_out'])) {
+        if (!$this->isEditableVisit($jadwalKlien)) {
             return abort(403, 'Cannot complete form for this visit');
         }
 
@@ -66,9 +65,8 @@ class VisitFormController extends Controller
             'type' => 'required|in:checkin,checkout'
         ]);
 
-        // Verify user owns the schedule
-        if ($jadwalKlien->jadwalKunjungan->user_id !== Auth::id()) {
-            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        if ($response = $this->authorizeEditableVisit($jadwalKlien)) {
+            return $response;
         }
 
         $result = $this->photoService->storeVisitPhoto(
@@ -88,13 +86,16 @@ class VisitFormController extends Controller
         // Update model
         $fieldName = $request->input('type') === 'checkin' ? 'foto_checkin' : 'foto_checkout';
         $jadwalKlien->update([$fieldName => $result['path']]);
+        $jadwalKlien->refresh();
 
         return response()->json([
             'success' => true,
             'message' => $result['message'],
             'photo' => [
                 'path' => $result['path'],
-                'url' => $result['url'],
+                'url' => $request->input('type') === 'checkin'
+                    ? $jadwalKlien->getFotoCheckinUrl()
+                    : $jadwalKlien->getFotoCheckoutUrl(),
                 'type' => $request->input('type')
             ]
         ]);
@@ -110,9 +111,8 @@ class VisitFormController extends Controller
             'signature' => 'required|string' // Base64 data URL from canvas
         ]);
 
-        // Verify user owns the schedule
-        if ($jadwalKlien->jadwalKunjungan->user_id !== Auth::id()) {
-            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        if ($response = $this->authorizeEditableVisit($jadwalKlien)) {
+            return $response;
         }
 
         $result = $this->photoService->storeSignature(
@@ -129,13 +129,14 @@ class VisitFormController extends Controller
         }
 
         $jadwalKlien->update(['tanda_tangan' => $result['path']]);
+        $jadwalKlien->refresh();
 
         return response()->json([
             'success' => true,
             'message' => $result['message'],
             'signature' => [
                 'path' => $result['path'],
-                'url' => $result['url']
+                'url' => $jadwalKlien->getTandaTanganUrl()
             ]
         ]);
     }
@@ -152,12 +153,11 @@ class VisitFormController extends Controller
             'nominal_transaksi' => 'nullable|numeric|min:0',
             'lat_checkout' => 'required|numeric|between:-90,90',
             'lng_checkout' => 'required|numeric|between:-180,180',
-            'accuracy_checkout' => 'required|numeric|min:0'
+            'accuracy_checkout' => 'required|numeric|min:0|max:999999.99'
         ]);
 
-        // Verify user owns the schedule
-        if ($jadwalKlien->jadwalKunjungan->user_id !== Auth::id()) {
-            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        if ($response = $this->authorizeEditableVisit($jadwalKlien)) {
+            return $response;
         }
 
         // Verify required documentation exists
@@ -209,19 +209,26 @@ class VisitFormController extends Controller
      */
     public function getPhotoPreview(JadwalKlien $jadwalKlien, string $type)
     {
-        // Verify user owns the schedule
-        if ($jadwalKlien->jadwalKunjungan->user_id !== Auth::id()) {
+        if (!$this->canViewVisitPhoto($jadwalKlien)) {
             return abort(403, 'Unauthorized');
         }
 
-        $fieldName = $type === 'checkin' ? 'foto_checkin' : 'foto_checkout';
-        $photoPath = $jadwalKlien->{$fieldName};
-
-        if (!$photoPath || !Storage::exists($photoPath)) {
+        if (!in_array($type, ['checkin', 'checkout', 'signature'], true)) {
             return abort(404, 'Photo not found');
         }
 
-        return Storage::response($photoPath);
+        $fieldName = match ($type) {
+            'checkin' => 'foto_checkin',
+            'checkout' => 'foto_checkout',
+            'signature' => 'tanda_tangan',
+        };
+        $photoPath = $jadwalKlien->{$fieldName};
+
+        if (!$photoPath || !Storage::disk('local')->exists($photoPath)) {
+            return abort(404, 'Photo not found');
+        }
+
+        return Storage::disk('local')->response($photoPath);
     }
 
     /**
@@ -231,15 +238,18 @@ class VisitFormController extends Controller
     public function deletePhoto(Request $request, JadwalKlien $jadwalKlien)
     {
         $request->validate([
-            'type' => 'required|in:checkin,checkout'
+            'type' => 'required|in:checkin,checkout,signature'
         ]);
 
-        // Verify user owns the schedule
-        if ($jadwalKlien->jadwalKunjungan->user_id !== Auth::id()) {
-            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        if ($response = $this->authorizeEditableVisit($jadwalKlien)) {
+            return $response;
         }
 
-        $fieldName = $request->input('type') === 'checkin' ? 'foto_checkin' : 'foto_checkout';
+        $fieldName = match ($request->input('type')) {
+            'checkin' => 'foto_checkin',
+            'checkout' => 'foto_checkout',
+            'signature' => 'tanda_tangan',
+        };
         $photoPath = $jadwalKlien->{$fieldName};
 
         if ($photoPath) {
@@ -251,5 +261,47 @@ class VisitFormController extends Controller
             'success' => true,
             'message' => 'Photo deleted successfully'
         ]);
+    }
+
+    private function authorizeEditableVisit(JadwalKlien $jadwalKlien)
+    {
+        if ($jadwalKlien->jadwalKunjungan->user_id !== Auth::id()) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
+        if (!$this->isEditableVisit($jadwalKlien)) {
+            return response()->json([
+                'success' => false,
+                'message' => "Cannot update form for visit status: {$jadwalKlien->status}"
+            ], 403);
+        }
+
+        return null;
+    }
+
+    private function isEditableVisit(JadwalKlien $jadwalKlien): bool
+    {
+        return $jadwalKlien->isEditableStatus();
+    }
+
+    private function canViewVisitPhoto(JadwalKlien $jadwalKlien): bool
+    {
+        $user = Auth::user();
+
+        if (!$user) {
+            return false;
+        }
+
+        if ($jadwalKlien->jadwalKunjungan->user_id === $user->id) {
+            return true;
+        }
+
+        if ($user->isAdmin()) {
+            return true;
+        }
+
+        return $user->isManager()
+            && $user->wilayah_id
+            && $jadwalKlien->jadwalKunjungan->user?->wilayah_id === $user->wilayah_id;
     }
 }

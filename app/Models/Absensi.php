@@ -53,7 +53,7 @@ class Absensi extends Model
     public static function todayFor($userId)
     {
         return self::where('user_id', $userId)
-            ->where('tanggal', now()->toDateString())
+            ->whereDate('tanggal', now()->toDateString())
             ->first();
     }
 

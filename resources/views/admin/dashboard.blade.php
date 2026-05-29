@@ -8,129 +8,158 @@
         <h2>
             <i class="fas fa-gauge-high me-2"></i>Dashboard Administrator
         </h2>
-        <p class="text-muted">Selamat datang di panel administrasi sistem monitoring sales force</p>
+        <p class="text-muted">Ringkasan operasional sistem monitoring sales force</p>
     </div>
 </div>
 
 <div class="row">
-    <!-- Total Users -->
-    <div class="col-md-6 col-lg-3 mb-4">
-        <div class="card border-left-primary">
+    <div class="col-md-6 col-xl-3 mb-4">
+        <div class="card border-left-primary h-100">
             <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
+                <div class="d-flex justify-content-between align-items-start">
                     <div>
-                        <h6 class="text-uppercase text-muted mb-1">Total Pengguna</h6>
-                        <h3 class="mb-0">0</h3>
+                        <h6 class="text-uppercase text-muted mb-1">Pengguna Aktif</h6>
+                        <h3 class="mb-0">{{ $totalUsers }}</h3>
+                        <small class="text-muted">Sales aktif: <span id="active-sales-count">{{ $activeSales }}</span></small>
                     </div>
-                    <div style="font-size: 2rem; color: #0d6efd; opacity: 0.2;">
+                    <div class="stat-icon text-primary">
                         <i class="fas fa-users"></i>
                     </div>
                 </div>
                 <hr>
-                <a href="#" class="btn btn-sm btn-primary">
+                <a href="{{ route('admin.users.index') }}" class="btn btn-sm btn-primary">
                     <i class="fas fa-arrow-right me-1"></i>Kelola Pengguna
                 </a>
             </div>
         </div>
     </div>
 
-    <!-- Total Klien -->
-    <div class="col-md-6 col-lg-3 mb-4">
-        <div class="card border-left-success">
+    <div class="col-md-6 col-xl-3 mb-4">
+        <div class="card border-left-success h-100">
             <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
+                <div class="d-flex justify-content-between align-items-start">
                     <div>
-                        <h6 class="text-uppercase text-muted mb-1">Total Klien</h6>
-                        <h3 class="mb-0">0</h3>
+                        <h6 class="text-uppercase text-muted mb-1">Klien Aktif</h6>
+                        <h3 class="mb-0">{{ $totalKlien }}</h3>
+                        <small class="text-muted">Wilayah: {{ $totalWilayah }}</small>
                     </div>
-                    <div style="font-size: 2rem; color: #198754; opacity: 0.2;">
+                    <div class="stat-icon text-success">
                         <i class="fas fa-building"></i>
                     </div>
                 </div>
                 <hr>
-                <a href="#" class="btn btn-sm btn-success">
+                <a href="{{ route('admin.klien.index') }}" class="btn btn-sm btn-success">
                     <i class="fas fa-arrow-right me-1"></i>Kelola Klien
                 </a>
             </div>
         </div>
     </div>
 
-    <!-- Total Wilayah -->
-    <div class="col-md-6 col-lg-3 mb-4">
-        <div class="card border-left-warning">
+    <div class="col-md-6 col-xl-3 mb-4">
+        <div class="card border-left-warning h-100">
             <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="text-uppercase text-muted mb-1">Total Wilayah</h6>
-                        <h3 class="mb-0">0</h3>
-                    </div>
-                    <div style="font-size: 2rem; color: #ffc107; opacity: 0.3;">
-                        <i class="fas fa-map"></i>
-                    </div>
-                </div>
-                <hr>
-                <a href="#" class="btn btn-sm btn-warning">
-                    <i class="fas fa-arrow-right me-1"></i>Kelola Wilayah
-                </a>
-            </div>
-        </div>
-    </div>
-
-    <!-- Total Jadwal -->
-    <div class="col-md-6 col-lg-3 mb-4">
-        <div class="card border-left-info">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
+                <div class="d-flex justify-content-between align-items-start">
                     <div>
                         <h6 class="text-uppercase text-muted mb-1">PJP Hari Ini</h6>
-                        <h3 class="mb-0">0</h3>
+                        <h3 class="mb-0">{{ $todaySchedules }}</h3>
+                        <small class="text-muted">Kunjungan: <span id="total-visits-count">{{ $todayVisits }}</span></small>
                     </div>
-                    <div style="font-size: 2rem; color: #0dcaf0; opacity: 0.2;">
+                    <div class="stat-icon text-warning">
                         <i class="fas fa-calendar-check"></i>
                     </div>
                 </div>
                 <hr>
-                <a href="#" class="btn btn-sm btn-info">
+                <a href="{{ route('admin.pjp.create') }}" class="btn btn-sm btn-warning">
                     <i class="fas fa-arrow-right me-1"></i>Buat PJP
                 </a>
             </div>
         </div>
     </div>
+
+    <div class="col-md-6 col-xl-3 mb-4">
+        <div class="card border-left-info h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="text-uppercase text-muted mb-1">Aktivitas Hari Ini</h6>
+                        <h3 class="mb-0" id="completed-visits-count">{{ $completedVisits }}</h3>
+                        <small class="text-muted">Absensi aktif: {{ $activeAttendance }}</small>
+                    </div>
+                    <div class="stat-icon text-info">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                </div>
+                <hr>
+                <a href="{{ route('admin.attendance.recap') }}" class="btn btn-sm btn-info">
+                    <i class="fas fa-arrow-right me-1"></i>Rekap Absensi
+                </a>
+            </div>
+        </div>
+    </div>
 </div>
 
-<!-- Quick Actions -->
-<div class="row mt-4">
+<div class="row mt-2">
     <div class="col-md-12">
         <div class="card">
             <div class="card-header">
                 <h5 class="mb-0">
-                    <i class="fas fa-lightning-bolt me-2"></i>Aksi Cepat
+                    <i class="fas fa-bolt me-2"></i>Aksi Cepat
                 </h5>
             </div>
             <div class="card-body">
-                <div class="row">
+                <div class="row g-3">
                     <div class="col-md-3">
-                        <a href="#" class="btn btn-outline-primary w-100 py-3">
-                            <i class="fas fa-user-plus mb-2" style="font-size: 1.5rem; display: block;"></i>
+                        <a href="{{ route('admin.users.create') }}" class="btn btn-outline-primary w-100 py-3">
+                            <i class="fas fa-user-plus mb-2 quick-action-icon"></i>
                             Tambah Pengguna
                         </a>
                     </div>
                     <div class="col-md-3">
-                        <a href="#" class="btn btn-outline-success w-100 py-3">
-                            <i class="fas fa-plus-circle mb-2" style="font-size: 1.5rem; display: block;"></i>
+                        <a href="{{ route('admin.klien.create') }}" class="btn btn-outline-success w-100 py-3">
+                            <i class="fas fa-plus-circle mb-2 quick-action-icon"></i>
                             Tambah Klien
                         </a>
                     </div>
                     <div class="col-md-3">
-                        <a href="#" class="btn btn-outline-warning w-100 py-3">
-                            <i class="fas fa-calendar-plus mb-2" style="font-size: 1.5rem; display: block;"></i>
+                        <a href="{{ route('admin.pjp.create') }}" class="btn btn-outline-warning w-100 py-3">
+                            <i class="fas fa-calendar-plus mb-2 quick-action-icon"></i>
                             Buat Jadwal
                         </a>
                     </div>
                     <div class="col-md-3">
-                        <a href="#" class="btn btn-outline-secondary w-100 py-3">
-                            <i class="fas fa-cog mb-2" style="font-size: 1.5rem; display: block;"></i>
-                            Pengaturan
+                        <a href="{{ route('admin.analytics.dashboard') }}" class="btn btn-outline-secondary w-100 py-3">
+                            <i class="fas fa-chart-pie mb-2 quick-action-icon"></i>
+                            Analytics
+                        </a>
+                    </div>
+                    <div class="col-md-3">
+                        <a href="{{ route('admin.wilayah.index') }}" class="btn btn-outline-primary w-100 py-3">
+                            <i class="fas fa-map mb-2 quick-action-icon"></i>
+                            Kelola Wilayah
+                        </a>
+                    </div>
+                    <div class="col-md-3">
+                        <a href="{{ route('admin.photo-gallery.index') }}" class="btn btn-outline-success w-100 py-3">
+                            <i class="fas fa-images mb-2 quick-action-icon"></i>
+                            Galeri Kunjungan
+                        </a>
+                    </div>
+                    <div class="col-md-3">
+                        <a href="{{ route('admin.configuration.index') }}" class="btn btn-outline-dark w-100 py-3">
+                            <i class="fas fa-cog mb-2 quick-action-icon"></i>
+                            Konfigurasi
+                        </a>
+                    </div>
+                    <div class="col-md-3">
+                        <a href="{{ route('admin.reports.export-sales-performance') }}" class="btn btn-outline-info w-100 py-3">
+                            <i class="fas fa-file-export mb-2 quick-action-icon"></i>
+                            Export Sales
+                        </a>
+                    </div>
+                    <div class="col-md-3">
+                        <a href="{{ route('admin.monitoring.index') }}" class="btn btn-outline-secondary w-100 py-3">
+                            <i class="fas fa-satellite-dish mb-2 quick-action-icon"></i>
+                            Monitoring Real-Time
                         </a>
                     </div>
                 </div>
@@ -138,6 +167,8 @@
         </div>
     </div>
 </div>
+
+@include('dashboard.partials.realtime-monitoring')
 
 <style>
     .border-left-primary {
@@ -154,6 +185,16 @@
 
     .border-left-info {
         border-left: 4px solid #0dcaf0 !important;
+    }
+
+    .stat-icon {
+        font-size: 2rem;
+        opacity: 0.2;
+    }
+
+    .quick-action-icon {
+        display: block;
+        font-size: 1.5rem;
     }
 </style>
 @endsection

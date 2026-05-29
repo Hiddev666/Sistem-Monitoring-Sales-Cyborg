@@ -42,7 +42,7 @@
                                         </div>
                                     @else
                                         <p class="text-muted mb-3">Belum ada foto check-in</p>
-                                        <input type="file" id="checkinPhotoInput" accept="image/*" class="d-none" onchange="handlePhotoSelect('checkin', this.files[0])">
+                                        <input type="file" id="checkinPhotoInput" accept="image/*" class="d-none" onchange="handlePhotoSelect('checkin', this.files[0], this)">
                                         <button type="button" class="btn btn-outline-primary" onclick="document.getElementById('checkinPhotoInput').click()">
                                             <i class="fas fa-camera"></i> Ambil Foto Check-in
                                         </button>
@@ -64,7 +64,7 @@
                                         </div>
                                     @else
                                         <p class="text-muted mb-3">Belum ada foto check-out</p>
-                                        <input type="file" id="checkoutPhotoInput" accept="image/*" class="d-none" onchange="handlePhotoSelect('checkout', this.files[0])">
+                                        <input type="file" id="checkoutPhotoInput" accept="image/*" class="d-none" onchange="handlePhotoSelect('checkout', this.files[0], this)">
                                         <button type="button" class="btn btn-outline-primary" onclick="document.getElementById('checkoutPhotoInput').click()">
                                             <i class="fas fa-camera"></i> Ambil Foto Check-out
                                         </button>
@@ -123,7 +123,7 @@
                             <div class="text-center mb-3">
                                 <img src="{{ $jadwalKlien->getTandaTanganUrl() }}" alt="Signature" class="img-fluid rounded" style="max-height: 150px; border: 1px solid #ddd; padding: 5px;">
                             </div>
-                            <button type="button" class="btn btn-sm btn-danger w-100 mb-3" onclick="clearSignature()">
+                            <button type="button" class="btn btn-sm btn-danger w-100 mb-3" onclick="deleteSignature()">
                                 <i class="fas fa-trash"></i> Hapus Tanda Tangan
                             </button>
                         @else
@@ -163,7 +163,7 @@
                                 <input type="number" id="accuracyCheckout" name="accuracy_checkout" step="0.01" class="form-control" readonly>
                             </div>
                             <div class="col-md-6">
-                                <button type="button" class="btn btn-outline-info mt-4" onclick="getCheckoutLocation()">
+                                <button type="button" class="btn btn-outline-info mt-4" onclick="getCheckoutLocation(this)">
                                     <i class="fas fa-location-arrow"></i> Ambil Lokasi Sekarang
                                 </button>
                             </div>
@@ -173,7 +173,7 @@
 
                 <!-- Submit Button -->
                 <div class="mb-4">
-                    <button type="button" onclick="submitVisitForm()" class="btn btn-success btn-lg w-100">
+                    <button type="button" onclick="submitVisitForm(this)" class="btn btn-success btn-lg w-100">
                         <i class="fas fa-save"></i> Simpan & Selesaikan Kunjungan
                     </button>
                 </div>
@@ -189,7 +189,7 @@
                 </div>
                 <div class="card-body">
                     <p><strong>Nama:</strong><br>{{ $jadwalKlien->klien->nama_klien ?? '-' }}</p>
-                    <p><strong>Kontak:</strong><br>{{ $jadwalKlien->klien->nomor_telepon ?? '-' }}</p>
+                    <p><strong>Kontak:</strong><br>{{ $jadwalKlien->klien->phone ?? '-' }}</p>
                     <p><strong>Alamat:</strong><br>{{ $jadwalKlien->klien->alamat ?? '-' }}</p>
                     @if($jadwalKlien->klien->latitude && $jadwalKlien->klien->longitude)
                         <a href="https://maps.google.com/?q={{ $jadwalKlien->klien->latitude }},{{ $jadwalKlien->klien->longitude }}" target="_blank" class="btn btn-sm btn-outline-primary w-100">
@@ -242,11 +242,20 @@
 </div>
 
 <!-- Signature Pad Library -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/signature_pad/4.1.5/signature_pad.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/signature_pad/4.1.5/signature_pad.umd.min.js"></script>
 
 <script>
     let signaturePad = null;
     let jadwalKlienId = {{ $jadwalKlien->id }};
+    let hasSignature = {{ $jadwalKlien->tanda_tangan ? 'true' : 'false' }};
+    const uploadPhotoUrlTemplate = @json(route('sales.pjp.upload-photo', ['jadwalKlien' => '__JADWAL_KLIEN__']));
+    const deletePhotoUrlTemplate = @json(route('sales.pjp.delete-photo', ['jadwalKlien' => '__JADWAL_KLIEN__']));
+    const uploadSignatureUrlTemplate = @json(route('sales.pjp.upload-signature', ['jadwalKlien' => '__JADWAL_KLIEN__']));
+    const submitFormUrlTemplate = @json(route('sales.pjp.submit-form', ['jadwalKlien' => '__JADWAL_KLIEN__']));
+    const uploadPhotoUrl = uploadPhotoUrlTemplate.replace('__JADWAL_KLIEN__', jadwalKlienId);
+    const deletePhotoUrl = deletePhotoUrlTemplate.replace('__JADWAL_KLIEN__', jadwalKlienId);
+    const uploadSignatureUrl = uploadSignatureUrlTemplate.replace('__JADWAL_KLIEN__', jadwalKlienId);
+    const submitFormUrl = submitFormUrlTemplate.replace('__JADWAL_KLIEN__', jadwalKlienId);
 
     document.addEventListener('DOMContentLoaded', function() {
         // Initialize signature pad if not already signed
@@ -256,7 +265,11 @@
                 const rect = canvas.getBoundingClientRect();
                 canvas.width = canvas.offsetWidth;
                 canvas.height = canvas.offsetHeight;
-                signaturePad = new SignaturePad(canvas);
+                if (typeof SignaturePad !== 'undefined') {
+                    signaturePad = new SignaturePad(canvas);
+                } else {
+                    showAlert('danger', 'Library tanda tangan gagal dimuat. Muat ulang halaman.');
+                }
             }
         @endif
 
@@ -270,24 +283,35 @@
         updateChecklist();
     });
 
-    function handlePhotoSelect(type, file) {
+    function handlePhotoSelect(type, file, input) {
         if (!file) return;
 
         const formData = new FormData();
         formData.append('photo', file);
         formData.append('type', type);
 
-        const uploadButton = event.target;
+        const uploadButton = input;
         uploadButton.disabled = true;
 
-        fetch(`/sales/pjp/klien/${jadwalKlienId}/upload-photo`, {
+        fetch(uploadPhotoUrl, {
             method: 'POST',
             headers: {
                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
             },
             body: formData
         })
-        .then(response => response.json())
+        .then(async response => {
+            const data = await response.json().catch(() => ({
+                success: false,
+                message: `Upload gagal dengan status ${response.status}`
+            }));
+
+            if (!response.ok) {
+                throw data;
+            }
+
+            return data;
+        })
         .then(data => {
             if (data.success) {
                 showAlert('success', data.message);
@@ -308,7 +332,7 @@
         })
         .catch(error => {
             console.error('Error:', error);
-            showAlert('danger', 'Gagal mengunggah foto');
+            showAlert('danger', error.message || 'Gagal mengunggah foto');
         })
         .finally(() => {
             uploadButton.disabled = false;
@@ -316,7 +340,7 @@
     }
 
     function deletePhoto(type) {
-        fetch(`/sales/pjp/klien/${jadwalKlienId}/delete-photo`, {
+        fetch(deletePhotoUrl, {
             method: 'DELETE',
             headers: {
                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
@@ -333,7 +357,7 @@
                 const container = document.getElementById(containerId);
                 container.innerHTML = `
                     <p class="text-muted mb-3">Belum ada foto ${type === 'checkin' ? 'check-in' : 'check-out'}</p>
-                    <input type="file" id="${inputId}" accept="image/*" class="d-none" onchange="handlePhotoSelect('${type}', this.files[0])">
+                    <input type="file" id="${inputId}" accept="image/*" class="d-none" onchange="handlePhotoSelect('${type}', this.files[0], this)">
                     <button type="button" class="btn btn-outline-primary" onclick="document.getElementById('${inputId}').click()">
                         <i class="fas fa-camera"></i> Ambil Foto ${type === 'checkin' ? 'Check-in' : 'Check-out'}
                     </button>
@@ -353,7 +377,7 @@
 
         const signatureData = signaturePad.toDataURL('image/png');
 
-        fetch(`/sales/pjp/klien/${jadwalKlienId}/upload-signature`, {
+        fetch(uploadSignatureUrl, {
             method: 'POST',
             headers: {
                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
@@ -365,14 +389,18 @@
         .then(data => {
             if (data.success) {
                 showAlert('success', data.message);
-                document.querySelector('[style*="cursor: crosshair"]')?.parentElement.innerHTML = `
-                    <div class="text-center">
-                        <img src="${data.signature.url}" alt="Signature" class="img-fluid rounded" style="max-height: 150px; border: 1px solid #ddd; padding: 5px;">
-                    </div>
-                    <button type="button" class="btn btn-sm btn-danger w-100 mt-3" onclick="clearSignature()">
-                        <i class="fas fa-trash"></i> Hapus Tanda Tangan
-                    </button>
-                `;
+                hasSignature = true;
+                const signatureCanvas = document.querySelector('[style*="cursor: crosshair"]');
+                if (signatureCanvas && signatureCanvas.parentElement) {
+                    signatureCanvas.parentElement.innerHTML = `
+                        <div class="text-center">
+                            <img src="${data.signature.url}" alt="Signature" class="img-fluid rounded" style="max-height: 150px; border: 1px solid #ddd; padding: 5px;">
+                        </div>
+                        <button type="button" class="btn btn-sm btn-danger w-100 mt-3" onclick="deleteSignature()">
+                            <i class="fas fa-trash"></i> Hapus Tanda Tangan
+                        </button>
+                    `;
+                }
                 updateChecklist();
             } else {
                 showAlert('danger', data.message);
@@ -386,13 +414,32 @@
         }
     }
 
-    function getCheckoutLocation() {
+    function deleteSignature() {
+        fetch(deletePhotoUrl, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ type: 'signature' })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showAlert('success', data.message);
+                setTimeout(() => window.location.reload(), 700);
+            } else {
+                showAlert('danger', data.message);
+            }
+        });
+    }
+
+    function getCheckoutLocation(button) {
         if (!navigator.geolocation) {
             showAlert('danger', 'Geolocation is not supported by your browser');
             return;
         }
 
-        const button = event.target;
         button.disabled = true;
         button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Mengambil lokasi...';
 
@@ -433,8 +480,6 @@
         updateChecklistItem('checkNotes', notesValue.length >= 5);
 
         // Check signature
-        const hasSignature = document.querySelector('[src*="signature"]') || 
-                           document.querySelector('.img-fluid[style*="150px"]');
         updateChecklistItem('checkSignature', hasSignature);
 
         // Check GPS
@@ -450,7 +495,7 @@
         icon.className = isComplete ? 'fas fa-check text-success' : 'fas fa-times text-danger';
     }
 
-    function submitVisitForm() {
+    function submitVisitForm(submitButton) {
         // Final validation
         const latCheckout = document.getElementById('latCheckout').value;
         const lngCheckout = document.getElementById('lngCheckout').value;
@@ -485,11 +530,10 @@
             _token: document.querySelector('meta[name="csrf-token"]').content
         };
 
-        const submitButton = event.target;
         submitButton.disabled = true;
         submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyimpan...';
 
-        fetch(`/sales/pjp/klien/${jadwalKlienId}/submit-form`, {
+        fetch(submitFormUrl, {
             method: 'POST',
             headers: {
                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
@@ -524,12 +568,23 @@
             ${message}
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         `;
-        document.querySelector('.container-fluid').insertBefore(alertDiv, document.querySelector('.row').firstChild);
+        const container = document.querySelector('.container-fluid');
+        if (container) {
+            container.insertBefore(alertDiv, container.firstChild);
+        }
         setTimeout(() => alertDiv.remove(), 5000);
     }
 
     // Update checklist on input change
     document.getElementById('hasilTipe').addEventListener('change', updateChecklist);
     document.getElementById('catatanKunjungan').addEventListener('input', updateChecklist);
+
+    window.handlePhotoSelect = handlePhotoSelect;
+    window.deletePhoto = deletePhoto;
+    window.saveSignature = saveSignature;
+    window.clearSignature = clearSignature;
+    window.deleteSignature = deleteSignature;
+    window.getCheckoutLocation = getCheckoutLocation;
+    window.submitVisitForm = submitVisitForm;
 </script>
 @endsection

@@ -97,9 +97,11 @@ class PJPController extends Controller
             'user_id' => 'required|exists:users,id',
             'tanggal' => 'required|date|after:yesterday',
             'keterangan' => 'nullable|string|max:255',
-            'klien' => 'nullable|array', // Made optional for debugging
+            'klien' => 'required|array|min:1',
             'klien.*' => 'exists:klien,id',
         ], [
+            'klien.required' => 'Minimal satu klien harus dipilih.',
+            'klien.min' => 'Minimal satu klien harus dipilih.',
             'klien.*.exists' => 'Klien yang dipilih tidak valid',
         ]);
 
@@ -112,16 +114,13 @@ class PJPController extends Controller
                 'created_by' => Auth::id(),
             ]);
 
-            // Add klien to schedule with ordering
-            if (!empty($validated['klien'])) {
-                foreach ($validated['klien'] as $index => $klienId) {
-                    JadwalKlien::create([
-                        'jadwal_kunjungan_id' => $jadwal->id,
-                        'klien_id' => $klienId,
-                        'urutan' => $index + 1,
-                        'status' => 'pending',
-                    ]);
-                }
+            foreach ($validated['klien'] as $index => $klienId) {
+                JadwalKlien::create([
+                    'jadwal_kunjungan_id' => $jadwal->id,
+                    'klien_id' => $klienId,
+                    'urutan' => $index + 1,
+                    'status' => 'pending',
+                ]);
             }
 
             return redirect()

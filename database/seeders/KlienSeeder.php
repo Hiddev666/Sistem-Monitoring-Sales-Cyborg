@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\Klien;
 use App\Models\Wilayah;
 use Illuminate\Database\Seeder;
+use RuntimeException;
 
 class KlienSeeder extends Seeder
 {
@@ -13,75 +14,69 @@ class KlienSeeder extends Seeder
      */
     public function run(): void
     {
-        // Get wilayah
-        $wilayah = Wilayah::first() ?? Wilayah::create([
-            'nama_wilayah' => 'Wilayah Default',
-            'keterangan' => 'Wilayah default untuk sample data',
-        ]);
+        $wilayah = Wilayah::firstOrCreate(
+            ['nama_wilayah' => 'Wilayah Default'],
+            ['keterangan' => 'Wilayah default untuk data klien dari klien.sql']
+        );
 
-        // Sample klien data
-        $kliens = [
-            [
-                'nama_klien' => 'Apotek Sehat Sentosa',
-                'kategori' => 'apotek',
-                'alamat' => 'Jl. Merdeka No. 123, Jakarta Pusat',
-                'wilayah_id' => $wilayah->id,
-                'latitude' => -2.9760971,
-                'longitude' => 104.7553750,
-                'contact_person' => 'Ibu Siti',
-                'phone' => '081234567890',
-                'is_active' => true,
-            ],
-            [
-                'nama_klien' => 'Toko Obat Makmur',
-                'kategori' => 'toko_obat',
-                'alamat' => 'Jl. Sudirman No. 456, Jakarta Utara',
-                'wilayah_id' => $wilayah->id,
-                'latitude' => -3.1956269,
-                'longitude' => 104.6803390,
-                'contact_person' => 'Bapak Ahmad',
-                'phone' => '081234567891',
-                'is_active' => true,
-            ],
-            [
-                'nama_klien' => 'Klinik Mitra Sehat',
-                'kategori' => 'rs_klinik',
-                'alamat' => 'Jl. Ahmad Yani No. 789, Jakarta Selatan',
-                'wilayah_id' => $wilayah->id,
-                'latitude' => -3.0131040,
-                'longitude' => 104.7777750,
-                'contact_person' => 'Dr. Hendra',
-                'phone' => '081234567892',
-                'is_active' => true,
-            ],
-            [
-                'nama_klien' => 'Apotek 24 Jam Prima',
-                'kategori' => 'apotek',
-                'alamat' => 'Jl. Gatot Subroto No. 100, Jakarta Pusat',
-                'wilayah_id' => $wilayah->id,
-                'latitude' => -2.8297919,
-                'longitude' => 104.7557151,
-                'contact_person' => 'Ibu Ratna',
-                'phone' => '081234567893',
-                'is_active' => true,
-            ],
-            [
-                'nama_klien' => 'Toko Obat Berkah',
-                'kategori' => 'toko_obat',
-                'alamat' => 'Jl. Hayam Wuruk No. 25, Jakarta Barat',
-                'wilayah_id' => $wilayah->id,
-                'latitude' => -2.9901961,
-                'longitude' => 104.7455940,
-                'contact_person' => 'Pak Didi',
-                'phone' => '081234567894',
-                'is_active' => true,
-            ],
-        ];
+        $kliens = $this->getKliensFromSql();
 
         foreach ($kliens as $klien) {
-            Klien::create($klien);
+            Klien::updateOrCreate(
+                [
+                    'nama_klien' => $klien['nama_klien'],
+                    'alamat' => $klien['alamat'],
+                ],
+                [
+                    'kategori' => $klien['kategori'],
+                    'wilayah_id' => $wilayah->id,
+                    'latitude' => $klien['latitude'],
+                    'longitude' => $klien['longitude'],
+                    'contact_person' => $klien['contact_person'],
+                    'phone' => $klien['phone'],
+                    'is_active' => true,
+                ]
+            );
         }
 
-        $this->command->info('Klien sample data created successfully!');
+        $this->command->info(count($kliens) . ' klien data seeded successfully!');
+    }
+
+    /**
+     * Parse the legacy INSERT statement from klien.sql into Laravel seed data.
+     */
+    private function getKliensFromSql(): array
+    {
+        $path = base_path('klien.sql');
+
+        if (!file_exists($path)) {
+            throw new RuntimeException('klien.sql not found at project root.');
+        }
+
+        $sql = file_get_contents($path);
+
+        preg_match_all('/^\s*\((.*)\)\s*(?:,|;)\s*$/m', $sql, $matches);
+
+        if (empty($matches[1])) {
+            throw new RuntimeException('No klien rows found in klien.sql.');
+        }
+
+        return array_map(function (string $row): array {
+            $columns = str_getcsv($row, ',', "'", '\\');
+
+            if (count($columns) < 10) {
+                throw new RuntimeException('Invalid klien.sql row: ' . $row);
+            }
+
+            return [
+                'nama_klien' => $columns[0],
+                'kategori' => $columns[1],
+                'alamat' => $columns[2],
+                'latitude' => (float) $columns[4],
+                'longitude' => (float) $columns[5],
+                'contact_person' => $columns[6],
+                'phone' => $columns[7],
+            ];
+        }, $matches[1]);
     }
 }

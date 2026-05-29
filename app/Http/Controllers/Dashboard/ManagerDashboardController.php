@@ -14,8 +14,14 @@ class ManagerDashboardController extends Controller
      */
     public function index(): View
     {
+        $manager = auth()->user();
+        $wilayahId = $this->managerWilayahId($manager);
+
         // Get dashboard statistics
         $activeSales = User::role('sales')
+            ->when($wilayahId !== null, function ($query) use ($wilayahId) {
+                $query->where('wilayah_id', $wilayahId);
+            })
             ->whereHas('absensi', function ($query) {
                 $query->whereDate('tanggal', today())
                     ->whereNotNull('waktu_masuk')
@@ -23,8 +29,18 @@ class ManagerDashboardController extends Controller
             })
             ->count();
 
-        $totalVisits = JadwalKlien::whereDate('created_at', today())->count();
-        $completedVisits = JadwalKlien::whereDate('created_at', today())
+        $visitsQuery = JadwalKlien::whereHas('jadwalKunjungan', function ($query) use ($wilayahId) {
+            $query->whereDate('tanggal', today());
+
+            if ($wilayahId !== null) {
+                $query->whereHas('user', function ($query) use ($wilayahId) {
+                    $query->where('wilayah_id', $wilayahId);
+                });
+            }
+        });
+
+        $totalVisits = (clone $visitsQuery)->count();
+        $completedVisits = (clone $visitsQuery)
             ->where('status', 'completed')
             ->count();
 
@@ -33,5 +49,14 @@ class ManagerDashboardController extends Controller
             'totalVisits',
             'completedVisits'
         ));
+    }
+
+    private function managerWilayahId(?\App\Models\User $manager): ?int
+    {
+        if (!$manager?->isManager()) {
+            return null;
+        }
+
+        return (int) ($manager->wilayah_id ?? 0);
     }
 }

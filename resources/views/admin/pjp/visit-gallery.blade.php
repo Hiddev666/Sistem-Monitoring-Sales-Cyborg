@@ -31,7 +31,7 @@
                         <div class="col-md-6">
                             <p><strong>Nama Klien:</strong> {{ $jadwalKlien->klien->nama_klien }}</p>
                             <p><strong>Alamat:</strong> {{ $jadwalKlien->klien->alamat }}</p>
-                            <p><strong>Kontak:</strong> {{ $jadwalKlien->klien->nomor_telepon }}</p>
+                            <p><strong>Kontak:</strong> {{ $jadwalKlien->klien->phone ?? '-' }}</p>
                         </div>
                         <div class="col-md-6">
                             <p><strong>Check-In:</strong> {{ $jadwalKlien->waktu_checkin ?? '-' }}</p>

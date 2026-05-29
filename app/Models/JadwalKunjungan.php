@@ -74,7 +74,7 @@ class JadwalKunjungan extends Model
     public static function todayFor($userId)
     {
         return self::where('user_id', $userId)
-            ->where('tanggal', now()->toDateString())
+            ->whereDate('tanggal', now()->toDateString())
             ->first();
     }
 
@@ -138,6 +138,31 @@ class JadwalKunjungan extends Model
         return $this->save();
     }
 
+    public function isPendingStatus(): bool
+    {
+        return $this->status === self::STATUS_PENDING;
+    }
+
+    public function isActiveStatus(): bool
+    {
+        return $this->status === self::STATUS_ACTIVE;
+    }
+
+    public function isCompletedStatus(): bool
+    {
+        return $this->status === self::STATUS_COMPLETED;
+    }
+
+    public function getStatusLabelAttribute(): string
+    {
+        return match ($this->status) {
+            self::STATUS_PENDING => 'Menunggu',
+            self::STATUS_ACTIVE => 'Berlangsung',
+            self::STATUS_COMPLETED => 'Selesai',
+            default => ucfirst((string) $this->status),
+        };
+    }
+
     /**
      * Get count of completed klien visits
      */
@@ -164,5 +189,32 @@ class JadwalKunjungan extends Model
         $total = $this->getTotalKlienCount();
         if ($total == 0) return 0;
         return round(($this->getCompletedKlienCount() / $total) * 100, 2);
+    }
+
+    /**
+     * Get the current visit for this schedule.
+     * Prioritize an active visit if one exists, otherwise the first pending visit by urutan.
+     */
+    public function getCurrentVisit(): ?JadwalKlien
+    {
+        $activeStatuses = [
+            JadwalKlien::STATUS_ACTIVE,
+            JadwalKlien::STATUS_ACTIVE_LEGACY,
+            JadwalKlien::STATUS_CHECKING_OUT,
+        ];
+
+        $activeVisit = $this->jadwalKlien()
+            ->whereIn('status', $activeStatuses)
+            ->orderBy('urutan')
+            ->first();
+
+        if ($activeVisit) {
+            return $activeVisit;
+        }
+
+        return $this->jadwalKlien()
+            ->where('status', JadwalKlien::STATUS_PENDING)
+            ->orderBy('urutan')
+            ->first();
     }
 }

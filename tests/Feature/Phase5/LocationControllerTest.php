@@ -6,6 +6,7 @@ use App\Models\JadwalKlien;
 use App\Models\JadwalKunjungan;
 use App\Models\LokasiRealtime;
 use App\Models\User;
+use App\Models\Wilayah;
 use App\Services\GpsValidationService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -30,6 +31,12 @@ class LocationControllerTest extends TestCase
         // Create test users
         $this->salesUser = $this->createUserWithRole('sales');
         $this->managerUser = $this->createUserWithRole('manager');
+
+        $this->salesUser->absensi()->create([
+            'tanggal' => today(),
+            'waktu_masuk' => now()->format('H:i:s'),
+            'status' => 'pending',
+        ]);
     }
 
     /**
@@ -67,6 +74,12 @@ class LocationControllerTest extends TestCase
     {
         Carbon::setTestNow(Carbon::parse('2026-05-22 09:00:00'));
 
+        $this->salesUser->absensi()->create([
+            'tanggal' => today(),
+            'waktu_masuk' => now()->format('H:i:s'),
+            'status' => 'pending',
+        ]);
+
         $this->actingAs($this->salesUser)->postJson('/api/location/update', [
             'latitude' => -2.9760971,
             'longitude' => 104.7553750,
@@ -79,8 +92,6 @@ class LocationControllerTest extends TestCase
             'longitude' => 104.7553750,
         ])->assertOk();
 
-        Carbon::setTestNow();
-
         $this->assertDatabaseCount('lokasi_realtime', 2);
 
         $response = $this->actingAs($this->managerUser)
@@ -89,6 +100,8 @@ class LocationControllerTest extends TestCase
         $response->assertOk();
         $this->assertEquals(65, $response->json('sales.0.noMovementMinutes'));
         $this->assertEquals('idle', $response->json('sales.0.status'));
+
+        Carbon::setTestNow();
     }
 
     /**
@@ -206,6 +219,38 @@ class LocationControllerTest extends TestCase
         // Should only include sales user
         $this->assertCount(1, $salesData);
         $this->assertEquals($this->salesUser->id, $salesData[0]['id']);
+    }
+
+    public function test_admin_can_get_sales_locations_across_wilayah()
+    {
+        $admin = $this->createUserWithRole('admin');
+        $wilayahA = Wilayah::factory()->create();
+        $wilayahB = Wilayah::factory()->create();
+        $salesA = $this->createUserWithRole('sales', ['wilayah_id' => $wilayahA->id]);
+        $salesB = $this->createUserWithRole('sales', ['wilayah_id' => $wilayahB->id]);
+
+        LokasiRealtime::factory()->create([
+            'user_id' => $salesA->id,
+            'recorded_at' => now(),
+        ]);
+
+        LokasiRealtime::factory()->create([
+            'user_id' => $salesB->id,
+            'recorded_at' => now(),
+        ]);
+
+        $response = $this->actingAs($admin)
+            ->getJson('/api/dashboard/sales-locations');
+
+        $response->assertOk();
+        $this->assertCount(2, $response->json('sales'));
+    }
+
+    public function test_sales_cannot_get_dashboard_locations()
+    {
+        $this->actingAs($this->salesUser)
+            ->getJson('/api/dashboard/sales-locations')
+            ->assertForbidden();
     }
 
     /**

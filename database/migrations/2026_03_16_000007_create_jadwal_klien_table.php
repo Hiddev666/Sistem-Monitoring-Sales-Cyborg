@@ -27,7 +27,7 @@ return new class extends Migration
             $table->time('waktu_checkout')->nullable();
             $table->decimal('lat_checkin', 10, 7)->nullable();
             $table->decimal('lng_checkin', 11, 7)->nullable();
-            $table->decimal('accuracy_checkin', 5, 2)->nullable();
+            $table->decimal('accuracy_checkin', 8, 2)->nullable();
             
             // Visit form data
             $table->integer('durasi_kunjungan')->nullable(); // minutes

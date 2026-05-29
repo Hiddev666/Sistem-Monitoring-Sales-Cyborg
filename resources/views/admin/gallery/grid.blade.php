@@ -32,6 +32,17 @@
                             </select>
                         </div>
                         <div class="col-md-2">
+                            <label class="form-label">Wilayah</label>
+                            <select name="wilayah_id" class="form-select">
+                                <option value="">-- Semua --</option>
+                                @foreach($wilayah as $item)
+                                    <option value="{{ $item->id }}" {{ request('wilayah_id') == $item->id ? 'selected' : '' }}>
+                                        {{ $item->nama_wilayah }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-2">
                             <label class="form-label">Hasil</label>
                             <select name="hasil_tipe" class="form-select">
                                 <option value="">-- Semua --</option>
@@ -40,6 +51,13 @@
                                         {{ $label }}
                                     </option>
                                 @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">Basis Tanggal</label>
+                            <select name="date_basis" class="form-select">
+                                <option value="visit_date" {{ $dateBasis === 'visit_date' ? 'selected' : '' }}>Tanggal Kunjungan</option>
+                                <option value="upload_date" {{ $dateBasis === 'upload_date' ? 'selected' : '' }}>Tanggal Upload</option>
                             </select>
                         </div>
                         <div class="col-md-2">
@@ -115,9 +133,14 @@
                     <!-- Card Body -->
                     <div class="card-body p-2">
                         <h6 class="card-title mb-1" style="font-size: 0.85rem;">{{ $photo->klien->nama_klien }}</h6>
+                        @php
+                            $displayDate = $dateBasis === 'upload_date'
+                                ? $photo->created_at
+                                : ($photo->jadwalKunjungan->tanggal ?? $photo->created_at);
+                        @endphp
                         <p class="card-text mb-2" style="font-size: 0.75rem; color: #666;">
                             {{ $photo->jadwalKunjungan->user->name }}<br/>
-                            {{ $photo->created_at->format('d M Y') }}
+                            {{ $displayDate->format('d M Y') }}
                         </p>
                         <span class="badge bg-info" style="font-size: 0.7rem;">
                             {{ $photo->getHasilTipeLabel() }}
@@ -131,7 +154,7 @@
                             <i class="fas fa-eye"></i>
                         </a>
                         @if($photo->foto_checkin)
-                            <a href="{{ route('admin.photo-gallery.download', [$photo->id, 'checkin']) }}" class="btn btn-sm btn-outline-secondary" 
+                            <a href="{{ route('admin.photo-gallery.download', ['jadwalKlien' => $photo->id, 'type' => 'checkin', 'date_basis' => request('date_basis', $dateBasis ?? 'visit_date')]) }}" class="btn btn-sm btn-outline-secondary" 
                                onclick="event.stopPropagation();">
                                 <i class="fas fa-download"></i>
                             </a>
@@ -185,7 +208,8 @@
 
 <script>
 function openLightbox(photoId) {
-    const url = `{{ route('admin.photo-gallery.lightbox', '__ID__') }}`.replace('__ID__', photoId);
+    const dateBasis = @json(request('date_basis', $dateBasis ?? 'visit_date'));
+    const url = `{{ route('admin.photo-gallery.lightbox', '__ID__') }}`.replace('__ID__', photoId) + `?date_basis=${encodeURIComponent(dateBasis)}`;
     
     fetch(url)
         .then(response => response.text())

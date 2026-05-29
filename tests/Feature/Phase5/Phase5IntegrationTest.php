@@ -33,6 +33,12 @@ class Phase5IntegrationTest extends TestCase
         $this->salesUser = $this->createUserWithRole('sales');
         $this->managerUser = $this->createUserWithRole('manager');
 
+        $this->salesUser->absensi()->create([
+            'tanggal' => today(),
+            'waktu_masuk' => now()->format('H:i:s'),
+            'status' => 'pending',
+        ]);
+
         // Create test klien
         $wilayah = Wilayah::factory()->create();
         $this->klien = Klien::factory()->create([
@@ -309,7 +315,7 @@ class Phase5IntegrationTest extends TestCase
         // Verify all data is integrated correctly
         $this->assertDatabaseHas('absensi', [
             'user_id' => $this->salesUser->id,
-            'waktu_masuk' => $attendance->waktu_masuk->format('H:i:s'),
+            'waktu_masuk' => $attendance->getRawOriginal('waktu_masuk'),
         ]);
 
         $this->assertDatabaseHas('jadwal_kunjungan', [
@@ -352,8 +358,8 @@ class Phase5IntegrationTest extends TestCase
                 'longitude' => 104.7553750,
             ]);
 
-        // Should succeed (any authenticated user can update location)
-        $response->assertStatus(200);
+        // Only checked-in sales users can update real-time location.
+        $response->assertStatus(403);
 
         // But dashboard should only show sales users
         LokasiRealtime::factory()->create([

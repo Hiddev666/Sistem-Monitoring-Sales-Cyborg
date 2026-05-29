@@ -28,9 +28,9 @@
             <div class="card text-center">
                 <div class="card-body">
                     <div class="text-muted small mb-1">Status</div>
-                    @if($jadwal->status === 'pending')
+                    @if($jadwal->isPendingStatus())
                         <span class="badge bg-warning text-dark">Menunggu</span>
-                    @elseif($jadwal->status === 'aktif')
+                    @elseif($jadwal->isActiveStatus())
                         <span class="badge bg-info">Berlangsung</span>
                     @else
                         <span class="badge bg-success">Selesai</span>
@@ -80,11 +80,11 @@
                     </div>
 
                     <div class="mt-3">
-                        @if($jadwal->status === 'pending')
+                        @if($jadwal->isPendingStatus())
                             <button class="btn btn-primary" id="startJourneyBtn">
                                 <i class="fas fa-play-circle"></i> Mulai Perjalanan
                             </button>
-                        @elseif($jadwal->status === 'aktif')
+                        @elseif($jadwal->isActiveStatus())
                             <button class="btn btn-danger" id="endJourneyBtn">
                                 <i class="fas fa-stop-circle"></i> Selesaikan Perjalanan
                             </button>
@@ -140,11 +140,11 @@
                                                 <small class="text-muted">{{ $item->klien->phone ?? '-' }}</small>
                                             </td>
                                             <td>
-                                                @if($item->status === 'completed')
+                                                @if($item->isCompletedStatus())
                                                     <span class="badge bg-success">Selesai</span>
-                                                @elseif($item->status === 'active')
+                                                @elseif($item->isActiveStatus())
                                                     <span class="badge bg-info">Aktif</span>
-                                                @elseif($item->status === 'skipped')
+                                                @elseif($item->isSkippedStatus())
                                                     <span class="badge bg-dark">Dilewati</span>
                                                 @else
                                                     <span class="badge bg-secondary">Menunggu</span>
@@ -185,11 +185,16 @@
                                                        class="btn btn-outline-primary">
                                                         <i class="fas fa-directions"></i>
                                                     </a>
-                                                    @if($item->status === 'active' || !$item->isFormComplete())
+                                                    @if($currentVisit && $currentVisit->id === $item->id && ($item->isActiveStatus() || $item->isCheckingOutStatus()) && !$item->isFormComplete())
                                                         <a href="{{ route('sales.pjp.form', [$jadwal->id, $item->id]) }}"
                                                            class="btn btn-outline-success">
                                                             <i class="fas fa-clipboard-list"></i>
                                                         </a>
+                                                    @elseif($currentVisit && $currentVisit->id === $item->id && $item->isPendingStatus())
+                                                        <button class="btn btn-outline-primary checkin-btn"
+                                                                data-jadwal-klien-id="{{ $item->id }}">
+                                                            <i class="fas fa-check"></i>
+                                                        </button>
                                                     @endif
                                                 </div>
                                             </td>
@@ -277,6 +282,55 @@
             alert(data.error || 'Perjalanan gagal diselesaikan.');
         })
         .catch(error => alert('Terjadi kesalahan: ' + error));
+    });
+
+    document.querySelectorAll('.checkin-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const jadwalKlienId = this.dataset.jadwalKlienId;
+            const checkinUrlTemplate = @json(route('sales.pjp.checkin-klien', ['jadwalKlien' => '__JADWAL_KLIEN__']));
+            const checkinUrl = checkinUrlTemplate.replace('__JADWAL_KLIEN__', jadwalKlienId);
+
+            if (!navigator.geolocation) {
+                alert('Browser Anda tidak mendukung GPS');
+                return;
+            }
+
+            this.disabled = true;
+            this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Memuat...';
+
+            navigator.geolocation.getCurrentPosition(
+                function(position) {
+                    fetch(checkinUrl, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            latitude: position.coords.latitude,
+                            longitude: position.coords.longitude,
+                            accuracy: Math.round(position.coords.accuracy),
+                        }),
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            alert(data.message);
+                            location.reload();
+                        } else {
+                            alert('Error: ' + data.message);
+                            btn.disabled = false;
+                            btn.innerHTML = '<i class="fas fa-check-in"></i> Check-In';
+                        }
+                    });
+                },
+                function(error) {
+                    alert('Gagal mendapatkan GPS: ' + error.message);
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-check-in"></i> Check-In';
+                }
+            );
+        });
     });
 </script>
 @endpush

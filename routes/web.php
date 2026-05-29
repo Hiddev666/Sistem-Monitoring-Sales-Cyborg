@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\LocationController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\PasswordController;
 use App\Http\Controllers\Dashboard\AdminDashboardController;
+use App\Http\Controllers\Dashboard\AdminMonitoringController;
 use App\Http\Controllers\Dashboard\AnalyticsController;
 use App\Http\Controllers\Dashboard\ManagerDashboardController;
 use App\Http\Controllers\Dashboard\SalesDashboardController;
@@ -51,13 +52,15 @@ Route::middleware('guest')->group(function () {
 });
 
 // Protected routes
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth', 'session.timeout'])->group(function () {
     // Logout
     Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
 
     // Password Management
     Route::get('/password/change', [PasswordController::class, 'showChangeForm'])->name('password.change');
     Route::post('/password/update', [PasswordController::class, 'update'])->name('password.update');
+    Route::get('/visit-photo/{jadwalKlien}/{type}', [VisitFormController::class, 'getPhotoPreview'])
+        ->name('visit-photo.preview');
 
     // ===========================
     // SALES ROUTES (Mobile Web)
@@ -105,7 +108,21 @@ Route::middleware('auth')->group(function () {
     // ===========================
     Route::middleware('role:manager')->prefix('manager')->name('manager.')->group(function () {
         Route::get('/dashboard', [ManagerDashboardController::class, 'index'])->name('dashboard');
-        // Additional manager routes will be added in other phases
+    });
+
+    Route::middleware('role:admin,super_admin,manager')->prefix('manager')->name('manager.')->group(function () {
+        Route::prefix('analytics')->name('analytics.')->group(function () {
+            Route::get('/dashboard', [AnalyticsController::class, 'adminDashboard'])->name('dashboard');
+            Route::get('/sales-performance', [AnalyticsController::class, 'salesPerformance'])->name('sales-performance');
+            Route::get('/klien-analysis', [AnalyticsController::class, 'klienAnalysis'])->name('klien-analysis');
+            Route::get('/regional-performance', [AnalyticsController::class, 'regionalPerformance'])->name('regional-performance');
+        });
+
+        Route::prefix('reports')->name('reports.')->group(function () {
+            Route::get('/sales-performance/export', [ReportExportController::class, 'salesPerformance'])->name('export-sales-performance');
+            Route::get('/regional-performance/export', [ReportExportController::class, 'regionalPerformance'])->name('export-regional-performance');
+            Route::get('/klien-analysis/export', [ReportExportController::class, 'klienAnalysis'])->name('export-klien-analysis');
+        });
     });
 
     // ===========================
@@ -113,6 +130,7 @@ Route::middleware('auth')->group(function () {
     // ===========================
     Route::middleware('role:admin,super_admin')->prefix('admin')->name('admin.')->group(function () {
         Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
+        Route::get('/monitoring', [AdminMonitoringController::class, 'index'])->name('monitoring.index');
 
         // ===========================
         // PHASE 2: MASTER DATA MANAGEMENT
@@ -214,8 +232,10 @@ Route::middleware('auth')->group(function () {
 
     // Location Tracking & Dashboard API
     Route::prefix('api')->name('api.')->group(function () {
-        Route::post('/location/update', [LocationController::class, 'updateLocation'])->name('location.update');
-        Route::get('/dashboard/sales-locations', [LocationController::class, 'salesLocations'])->name('dashboard.sales-locations');
-        Route::get('/dashboard/statistics', [LocationController::class, 'dashboardStatistics'])->name('dashboard.statistics');
+        Route::middleware('role:sales')->post('/location/update', [LocationController::class, 'updateLocation'])->name('location.update');
+        Route::middleware('role:manager,admin,super_admin')->group(function () {
+            Route::get('/dashboard/sales-locations', [LocationController::class, 'salesLocations'])->name('dashboard.sales-locations');
+            Route::get('/dashboard/statistics', [LocationController::class, 'dashboardStatistics'])->name('dashboard.statistics');
+        });
     });
 });
