@@ -6,10 +6,12 @@ use App\Models\JadwalKunjungan;
 use App\Models\JadwalKlien;
 use App\Models\User;
 use App\Models\Klien;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\ValidationException;
 
 class PJPController extends Controller
 {
@@ -106,6 +108,8 @@ class PJPController extends Controller
         ]);
 
         try {
+            $this->ensureScheduleDoesNotExist($validated['user_id'], $validated['tanggal']);
+
             $jadwal = JadwalKunjungan::create([
                 'user_id' => $validated['user_id'],
                 'tanggal' => $validated['tanggal'],
@@ -126,10 +130,36 @@ class PJPController extends Controller
             return redirect()
                 ->route('admin.pjp.index')
                 ->with('success', 'Jadwal kunjungan berhasil dibuat!');
-        } catch (\Exception $e) {
+        } catch (ValidationException $e) {
+            throw $e;
+        } catch (QueryException $e) {
+            if ($this->isDuplicateScheduleException($e)) {
+                throw ValidationException::withMessages([
+                    'tanggal' => 'Sales ini sudah memiliki jadwal kunjungan pada tanggal tersebut. Silakan pilih tanggal lain.',
+                ]);
+            }
+
+            Log::error('Failed to store schedule', [
+                'error' => $e->getMessage(),
+                'user_id' => $validated['user_id'] ?? null,
+                'tanggal' => $validated['tanggal'] ?? null,
+            ]);
+
             return redirect()
                 ->back()
-                ->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
+                ->withInput()
+                ->with('error', 'Jadwal kunjungan gagal disimpan. Silakan coba lagi.');
+        } catch (\Exception $e) {
+            Log::error('Failed to store schedule', [
+                'error' => $e->getMessage(),
+                'user_id' => $validated['user_id'] ?? null,
+                'tanggal' => $validated['tanggal'] ?? null,
+            ]);
+
+            return redirect()
+                ->back()
+                ->withInput()
+                ->with('error', 'Jadwal kunjungan gagal disimpan. Silakan coba lagi.');
         }
     }
 
@@ -164,6 +194,8 @@ class PJPController extends Controller
         ]);
 
         try {
+            $this->ensureScheduleDoesNotExist($validated['user_id'], $validated['tanggal'], $jadwal->id);
+
             $jadwal->update([
                 'user_id' => $validated['user_id'],
                 'tanggal' => $validated['tanggal'],
@@ -184,10 +216,38 @@ class PJPController extends Controller
             return redirect()
                 ->route('admin.pjp.index')
                 ->with('success', 'Jadwal kunjungan berhasil diperbarui!');
-        } catch (\Exception $e) {
+        } catch (ValidationException $e) {
+            throw $e;
+        } catch (QueryException $e) {
+            if ($this->isDuplicateScheduleException($e)) {
+                throw ValidationException::withMessages([
+                    'tanggal' => 'Sales ini sudah memiliki jadwal kunjungan pada tanggal tersebut. Silakan pilih tanggal lain.',
+                ]);
+            }
+
+            Log::error('Failed to update schedule', [
+                'error' => $e->getMessage(),
+                'jadwal_id' => $jadwal->id,
+                'user_id' => $validated['user_id'] ?? null,
+                'tanggal' => $validated['tanggal'] ?? null,
+            ]);
+
             return redirect()
                 ->back()
-                ->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
+                ->withInput()
+                ->with('error', 'Jadwal kunjungan gagal diperbarui. Silakan coba lagi.');
+        } catch (\Exception $e) {
+            Log::error('Failed to update schedule', [
+                'error' => $e->getMessage(),
+                'jadwal_id' => $jadwal->id,
+                'user_id' => $validated['user_id'] ?? null,
+                'tanggal' => $validated['tanggal'] ?? null,
+            ]);
+
+            return redirect()
+                ->back()
+                ->withInput()
+                ->with('error', 'Jadwal kunjungan gagal diperbarui. Silakan coba lagi.');
         }
     }
 
@@ -219,5 +279,33 @@ class PJPController extends Controller
             'selesai' => '<span class="badge bg-success">Selesai</span>',
         ];
         return $badges[$status] ?? '<span class="badge bg-secondary">Unknown</span>';
+    }
+
+    private function ensureScheduleDoesNotExist(int $userId, string $tanggal, ?int $ignoreId = null): void
+    {
+        $exists = JadwalKunjungan::query()
+            ->where('user_id', $userId)
+            ->whereDate('tanggal', $tanggal)
+            ->when($ignoreId !== null, fn ($query) => $query->where('id', '!=', $ignoreId))
+            ->exists();
+
+        if ($exists) {
+            throw ValidationException::withMessages([
+                'tanggal' => 'Sales ini sudah memiliki jadwal kunjungan pada tanggal tersebut. Silakan pilih tanggal lain.',
+            ]);
+        }
+    }
+
+    private function isDuplicateScheduleException(QueryException $e): bool
+    {
+        $message = $e->getMessage();
+        $sqlState = $e->getCode();
+        $driverCode = $e->errorInfo[1] ?? null;
+
+        return ($sqlState === '23000' || $driverCode === 1062)
+            && (
+                str_contains($message, 'jadwal_kunjungan_user_id_tanggal_unique')
+                || str_contains($message, 'Duplicate entry')
+            );
     }
 }

@@ -32,18 +32,21 @@
 
         .sidebar {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
+            height: 100vh;
             position: fixed;
             width: 250px;
             left: 0;
             top: 0;
             color: white;
-            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
             z-index: 1000;
             padding-top: 0;
         }
 
         .sidebar .brand {
+            flex: 0 0 auto;
             background-color: rgba(0, 0, 0, 0.1);
             padding: 1.5rem;
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
@@ -77,6 +80,80 @@
         .sidebar .nav-link i {
             width: 20px;
             margin-right: 0.5rem;
+        }
+
+        .sidebar-section {
+            margin-bottom: 0.5rem;
+        }
+
+        .sidebar-section-toggle {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+            background: transparent;
+            border: 0;
+            color: rgba(255, 255, 255, 0.88);
+            padding: 0.75rem 1.5rem;
+            border-left: 3px solid transparent;
+            transition: all 0.3s ease;
+            text-align: left;
+        }
+
+        .sidebar-section-toggle:hover,
+        .sidebar-section-toggle:focus {
+            background-color: rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+            border-left-color: white;
+            outline: none;
+        }
+
+        .sidebar-section-toggle.active {
+            background-color: rgba(255, 255, 255, 0.2);
+            color: #ffffff;
+            border-left-color: white;
+        }
+
+        .sidebar-section-title {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            min-width: 0;
+        }
+
+        .sidebar-section-title span {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .sidebar-section-caret {
+            transition: transform 0.2s ease;
+            opacity: 0.9;
+            flex: 0 0 auto;
+        }
+
+        .sidebar-section-toggle:not(.collapsed) .sidebar-section-caret {
+            transform: rotate(180deg);
+        }
+
+        .sidebar-section-body {
+            padding: 0.25rem 0 0.5rem;
+        }
+
+        .sidebar-section-body .nav-link {
+            padding-left: 2.25rem;
+        }
+
+        .sidebar-nav {
+            flex: 1 1 auto;
+            min-height: 0;
+            overflow-y: auto;
+            overflow-x: hidden;
+            overscroll-behavior: contain;
+            scrollbar-gutter: stable;
+            padding-bottom: 1rem;
         }
 
         .main-content {
@@ -197,6 +274,13 @@
         $regionalPerformanceRoute = $isManager ? 'manager.analytics.regional-performance' : 'admin.analytics.regional-performance';
         $klienAnalysisRoute = $isManager ? 'manager.analytics.klien-analysis' : 'admin.analytics.klien-analysis';
         $roleName = $authUser?->roles->first()?->name ?? 'unknown';
+        $managementActive = request()->routeIs('admin.users.*');
+        $dataMasterActive = request()->routeIs('admin.klien.*', 'admin.wilayah.*');
+        $monitoringActive = request()->routeIs('admin.monitoring.index', 'admin.analytics.*', 'manager.analytics.*', 'admin.photo-gallery.*');
+        $scheduleAttendanceActive = request()->routeIs('admin.pjp.*', 'admin.attendance.*');
+        $operationalActive = request()->routeIs('sales.pjp.*', 'sales.attendance.*');
+        $superAdminActive = request()->routeIs('admin.configuration.*');
+        $accountActive = request()->routeIs('password.*');
     @endphp
 
     <!-- Sidebar Navigation -->
@@ -208,125 +292,152 @@
             <small>Monitoring Kinerja</small>
         </div>
 
-        <nav class="nav flex-column">
+        <nav class="nav flex-column sidebar-nav">
             @auth
-                <!-- Dashboard -->
                 <a class="nav-link @if(Route::is('*.dashboard')) active @endif" href="{{ route($dashboardRoute) }}">
                     <i class="fas fa-gauge-high"></i> Dashboard
                 </a>
 
                 @if($canManageUsers)
-                    <!-- User Management -->
-                    <hr class="text-white-50">
-                    <span class="nav-link text-uppercase" style="cursor: default; font-size: 0.75rem; color: rgba(255,255,255,0.5);">Manajemen User</span>
-
-                    <a class="nav-link {{ request()->routeIs('admin.users.*') ? 'active' : '' }}" href="{{ route('admin.users.index') }}">
-                        <i class="fas fa-users"></i> Pengguna
-                    </a>
+                    <div class="sidebar-section">
+                        <button class="sidebar-section-toggle {{ $managementActive ? '' : 'collapsed' }}" type="button" data-bs-toggle="collapse" data-bs-target="#sidebarManagement" aria-expanded="{{ $managementActive ? 'true' : 'false' }}" aria-controls="sidebarManagement">
+                            <span class="sidebar-section-title">
+                                <i class="fas fa-users"></i>
+                                <span>Manajemen User</span>
+                            </span>
+                            <i class="fas fa-chevron-down sidebar-section-caret"></i>
+                        </button>
+                        <div class="collapse {{ $managementActive ? 'show' : '' }} sidebar-section-body" id="sidebarManagement">
+                            <a class="nav-link {{ request()->routeIs('admin.users.*') ? 'active' : '' }}" href="{{ route('admin.users.index') }}">
+                                <i class="fas fa-users"></i> Pengguna
+                            </a>
+                        </div>
+                    </div>
                 @endif
 
                 @if($isAdmin)
-                    <!-- Master Data -->
-                    <hr class="text-white-50">
-                    <span class="nav-link text-uppercase" style="cursor: default; font-size: 0.75rem; color: rgba(255,255,255,0.5);">Data Master</span>
+                    <div class="sidebar-section">
+                        <button class="sidebar-section-toggle {{ $dataMasterActive ? '' : 'collapsed' }}" type="button" data-bs-toggle="collapse" data-bs-target="#sidebarDataMaster" aria-expanded="{{ $dataMasterActive ? 'true' : 'false' }}" aria-controls="sidebarDataMaster">
+                            <span class="sidebar-section-title">
+                                <i class="fas fa-boxes-stacked"></i>
+                                <span>Data Master</span>
+                            </span>
+                            <i class="fas fa-chevron-down sidebar-section-caret"></i>
+                        </button>
+                        <div class="collapse {{ $dataMasterActive ? 'show' : '' }} sidebar-section-body" id="sidebarDataMaster">
+                            <a class="nav-link {{ request()->routeIs('admin.klien.*') ? 'active' : '' }}" href="{{ route('admin.klien.index') }}">
+                                <i class="fas fa-building"></i> Klien/Toko
+                            </a>
+                            <a class="nav-link {{ request()->routeIs('admin.wilayah.*') ? 'active' : '' }}" href="{{ route('admin.wilayah.index') }}">
+                                <i class="fas fa-map"></i> Wilayah
+                            </a>
+                        </div>
+                    </div>
 
-                    <a class="nav-link {{ request()->routeIs('admin.klien.*') ? 'active' : '' }}" href="{{ route('admin.klien.index') }}">
-                        <i class="fas fa-building"></i> Klien/Toko
-                    </a>
-                    <a class="nav-link {{ request()->routeIs('admin.wilayah.*') ? 'active' : '' }}" href="{{ route('admin.wilayah.index') }}">
-                        <i class="fas fa-map"></i> Wilayah
-                    </a>
+                    <div class="sidebar-section">
+                        <button class="sidebar-section-toggle {{ $monitoringActive ? '' : 'collapsed' }}" type="button" data-bs-toggle="collapse" data-bs-target="#sidebarMonitoring" aria-expanded="{{ $monitoringActive ? 'true' : 'false' }}" aria-controls="sidebarMonitoring">
+                            <span class="sidebar-section-title">
+                                <i class="fas fa-chart-line"></i>
+                                <span>Monitoring & Laporan</span>
+                            </span>
+                            <i class="fas fa-chevron-down sidebar-section-caret"></i>
+                        </button>
+                        <div class="collapse {{ $monitoringActive ? 'show' : '' }} sidebar-section-body" id="sidebarMonitoring">
+                            <a class="nav-link {{ request()->routeIs('admin.monitoring.index') ? 'active' : '' }}" href="{{ route('admin.monitoring.index') }}">
+                                <i class="fas fa-satellite-dish"></i> Monitoring Real-Time
+                            </a>
+                            @if($canViewReports)
+                                <a class="nav-link {{ request()->routeIs('admin.analytics.dashboard', 'manager.analytics.dashboard') ? 'active' : '' }}" href="{{ route($analyticsDashboardRoute) }}">
+                                    <i class="fas fa-chart-pie"></i> Ringkasan Analytics
+                                </a>
+                                <a class="nav-link {{ request()->routeIs('admin.analytics.sales-performance', 'manager.analytics.sales-performance') ? 'active' : '' }}" href="{{ route($salesPerformanceRoute) }}">
+                                    <i class="fas fa-chart-bar"></i> Performa Sales
+                                </a>
+                                <a class="nav-link {{ request()->routeIs('admin.analytics.regional-performance', 'manager.analytics.regional-performance') ? 'active' : '' }}" href="{{ route($regionalPerformanceRoute) }}">
+                                    <i class="fas fa-map-marked-alt"></i> Performa Regional
+                                </a>
+                                <a class="nav-link {{ request()->routeIs('admin.analytics.klien-analysis', 'manager.analytics.klien-analysis') ? 'active' : '' }}" href="{{ route($klienAnalysisRoute) }}">
+                                    <i class="fas fa-users"></i> Analisis Klien
+                                </a>
+                            @endif
+                            @if($canViewKunjungan)
+                                <a class="nav-link {{ request()->routeIs('admin.photo-gallery.*') ? 'active' : '' }}" href="{{ route('admin.photo-gallery.index') }}">
+                                    <i class="fas fa-images"></i> Galeri Kunjungan
+                                </a>
+                            @endif
+                        </div>
+                    </div>
 
-                    <!-- Monitoring & Reporting -->
-                    <hr class="text-white-50">
-                    <span class="nav-link text-uppercase" style="cursor: default; font-size: 0.75rem; color: rgba(255,255,255,0.5);">Monitoring & Laporan</span>
-
-                    <a class="nav-link {{ request()->routeIs('admin.monitoring.index') ? 'active' : '' }}" href="{{ route('admin.monitoring.index') }}">
-                        <i class="fas fa-satellite-dish"></i> Monitoring Real-Time
-                    </a>
-
-                    @if($canViewReports)
-                        @php($analyticsActive = request()->routeIs('admin.analytics.*', 'manager.analytics.*'))
-                        <a class="nav-link {{ $analyticsActive ? 'active' : '' }}" href="{{ route($analyticsDashboardRoute) }}">
-                            <i class="fas fa-chart-pie"></i> Ringkasan Analytics
-                        </a>
-                        <a class="nav-link {{ request()->routeIs('admin.analytics.sales-performance', 'manager.analytics.sales-performance') ? 'active' : '' }}" href="{{ route($salesPerformanceRoute) }}">
-                            <i class="fas fa-chart-bar"></i> Performa Sales
-                        </a>
-                        <a class="nav-link {{ request()->routeIs('admin.analytics.regional-performance', 'manager.analytics.regional-performance') ? 'active' : '' }}" href="{{ route($regionalPerformanceRoute) }}">
-                            <i class="fas fa-map-marked-alt"></i> Performa Regional
-                        </a>
-                        <a class="nav-link {{ request()->routeIs('admin.analytics.klien-analysis', 'manager.analytics.klien-analysis') ? 'active' : '' }}" href="{{ route($klienAnalysisRoute) }}">
-                            <i class="fas fa-users"></i> Analisis Klien
-                        </a>
-                    @endif
-                    @if($canViewKunjungan)
-                        <a class="nav-link {{ request()->routeIs('admin.photo-gallery.*') ? 'active' : '' }}" href="{{ route('admin.photo-gallery.index') }}">
-                            <i class="fas fa-images"></i> Galeri Kunjungan
-                        </a>
-                    @endif
-
-                    <!-- Scheduling -->
-                    <hr class="text-white-50">
-                    <span class="nav-link text-uppercase" style="cursor: default; font-size: 0.75rem; color: rgba(255,255,255,0.5);">Penjadwalan & Absensi</span>
-
-                    <a class="nav-link {{ request()->routeIs('admin.pjp.*') ? 'active' : '' }}" href="{{ route('admin.pjp.index') }}">
-                        <i class="fas fa-calendar-check"></i> PJP (Jadwal)
-                    </a>
-                    <a class="nav-link {{ request()->routeIs('admin.attendance.*') ? 'active' : '' }}" href="{{ route('admin.attendance.recap') }}">
-                        <i class="fas fa-clock"></i> Absensi
-                    </a>
+                    <div class="sidebar-section">
+                        <button class="sidebar-section-toggle {{ $scheduleAttendanceActive ? '' : 'collapsed' }}" type="button" data-bs-toggle="collapse" data-bs-target="#sidebarSchedule" aria-expanded="{{ $scheduleAttendanceActive ? 'true' : 'false' }}" aria-controls="sidebarSchedule">
+                            <span class="sidebar-section-title">
+                                <i class="fas fa-calendar-check"></i>
+                                <span>Penjadwalan & Absensi</span>
+                            </span>
+                            <i class="fas fa-chevron-down sidebar-section-caret"></i>
+                        </button>
+                        <div class="collapse {{ $scheduleAttendanceActive ? 'show' : '' }} sidebar-section-body" id="sidebarSchedule">
+                            <a class="nav-link {{ request()->routeIs('admin.pjp.*') ? 'active' : '' }}" href="{{ route('admin.pjp.index') }}">
+                                <i class="fas fa-calendar-check"></i> PJP (Jadwal)
+                            </a>
+                            <a class="nav-link {{ request()->routeIs('admin.attendance.*') ? 'active' : '' }}" href="{{ route('admin.attendance.recap') }}">
+                                <i class="fas fa-clock"></i> Absensi
+                            </a>
+                        </div>
+                    </div>
                 @endif
 
-                @if(auth()->user()->isSales())
-                    <!-- Sales Menu -->
-                    <hr class="text-white-50">
-                    <span class="nav-link text-uppercase" style="cursor: default; font-size: 0.75rem; color: rgba(255,255,255,0.5);">Operasional</span>
-
-                    <a class="nav-link {{ request()->routeIs('sales.pjp.*') ? 'active' : '' }}" href="{{ route('sales.pjp.today') }}">
-                        <i class="fas fa-calendar-alt"></i> Jadwal Hari Ini
-                    </a>
-                    <a class="nav-link {{ request()->routeIs('sales.attendance.*') ? 'active' : '' }}" href="{{ route('sales.attendance.index') }}">
-                        <i class="fas fa-clock"></i> Absensi
-                    </a>
-                @endif
-
-                @if($isManager)
-                    <!-- Manager Menu -->
-                    <hr class="text-white-50">
-                    <span class="nav-link text-uppercase" style="cursor: default; font-size: 0.75rem; color: rgba(255,255,255,0.5);">Laporan</span>
-
-                    <a class="nav-link {{ request()->routeIs('admin.analytics.dashboard', 'manager.analytics.dashboard') ? 'active' : '' }}" href="{{ route($analyticsDashboardRoute) }}">
-                        <i class="fas fa-chart-pie"></i> Ringkasan Analytics
-                    </a>
-                    <a class="nav-link {{ request()->routeIs('admin.analytics.sales-performance', 'manager.analytics.sales-performance') ? 'active' : '' }}" href="{{ route($salesPerformanceRoute) }}">
-                        <i class="fas fa-chart-bar"></i> Performa Sales
-                    </a>
-                    <a class="nav-link {{ request()->routeIs('admin.analytics.regional-performance', 'manager.analytics.regional-performance') ? 'active' : '' }}" href="{{ route($regionalPerformanceRoute) }}">
-                        <i class="fas fa-map-marked-alt"></i> Performa Regional
-                    </a>
-                    <a class="nav-link {{ request()->routeIs('admin.analytics.klien-analysis', 'manager.analytics.klien-analysis') ? 'active' : '' }}" href="{{ route($klienAnalysisRoute) }}">
-                        <i class="fas fa-users"></i> Analisis Klien
-                    </a>
+                @if($authUser?->isSales())
+                    <div class="sidebar-section">
+                        <button class="sidebar-section-toggle {{ $operationalActive ? '' : 'collapsed' }}" type="button" data-bs-toggle="collapse" data-bs-target="#sidebarOperational" aria-expanded="{{ $operationalActive ? 'true' : 'false' }}" aria-controls="sidebarOperational">
+                            <span class="sidebar-section-title">
+                                <i class="fas fa-briefcase"></i>
+                                <span>Operasional</span>
+                            </span>
+                            <i class="fas fa-chevron-down sidebar-section-caret"></i>
+                        </button>
+                        <div class="collapse {{ $operationalActive ? 'show' : '' }} sidebar-section-body" id="sidebarOperational">
+                            <a class="nav-link {{ request()->routeIs('sales.pjp.*') ? 'active' : '' }}" href="{{ route('sales.pjp.today') }}">
+                                <i class="fas fa-calendar-alt"></i> Jadwal Hari Ini
+                            </a>
+                            <a class="nav-link {{ request()->routeIs('sales.attendance.*') ? 'active' : '' }}" href="{{ route('sales.attendance.index') }}">
+                                <i class="fas fa-clock"></i> Absensi
+                            </a>
+                        </div>
+                    </div>
                 @endif
 
                 @if($isSuperAdmin)
-                    <!-- Super Admin Control -->
-                    <hr class="text-white-50">
-                    <span class="nav-link text-uppercase" style="cursor: default; font-size: 0.75rem; color: rgba(255,255,255,0.5);">Kontrol Super Admin</span>
-
-                    <a class="nav-link {{ request()->routeIs('admin.configuration.*') ? 'active' : '' }}" href="{{ route('admin.configuration.index') }}">
-                        <i class="fas fa-cog"></i> Konfigurasi Sistem
-                    </a>
+                    <div class="sidebar-section">
+                        <button class="sidebar-section-toggle {{ $superAdminActive ? '' : 'collapsed' }}" type="button" data-bs-toggle="collapse" data-bs-target="#sidebarSuperAdmin" aria-expanded="{{ $superAdminActive ? 'true' : 'false' }}" aria-controls="sidebarSuperAdmin">
+                            <span class="sidebar-section-title">
+                                <i class="fas fa-cog"></i>
+                                <span>Kontrol Super Admin</span>
+                            </span>
+                            <i class="fas fa-chevron-down sidebar-section-caret"></i>
+                        </button>
+                        <div class="collapse {{ $superAdminActive ? 'show' : '' }} sidebar-section-body" id="sidebarSuperAdmin">
+                            <a class="nav-link {{ request()->routeIs('admin.configuration.*') ? 'active' : '' }}" href="{{ route('admin.configuration.index') }}">
+                                <i class="fas fa-cog"></i> Konfigurasi Sistem
+                            </a>
+                        </div>
+                    </div>
                 @endif
 
-                <!-- Account -->
-                <hr class="text-white-50">
-                <span class="nav-link text-uppercase" style="cursor: default; font-size: 0.75rem; color: rgba(255,255,255,0.5);">Akun</span>
-
-                <a class="nav-link" href="{{ route('password.change') }}">
-                    <i class="fas fa-lock"></i> Ubah Password
-                </a>
+                <div class="sidebar-section">
+                    <button class="sidebar-section-toggle {{ $accountActive ? '' : 'collapsed' }}" type="button" data-bs-toggle="collapse" data-bs-target="#sidebarAccount" aria-expanded="{{ $accountActive ? 'true' : 'false' }}" aria-controls="sidebarAccount">
+                        <span class="sidebar-section-title">
+                            <i class="fas fa-lock"></i>
+                            <span>Akun</span>
+                        </span>
+                        <i class="fas fa-chevron-down sidebar-section-caret"></i>
+                    </button>
+                    <div class="collapse {{ $accountActive ? 'show' : '' }} sidebar-section-body" id="sidebarAccount">
+                        <a class="nav-link {{ request()->routeIs('password.*') ? 'active' : '' }}" href="{{ route('password.change') }}">
+                            <i class="fas fa-lock"></i> Ubah Password
+                        </a>
+                    </div>
+                </div>
             @endauth
         </nav>
     </div>
