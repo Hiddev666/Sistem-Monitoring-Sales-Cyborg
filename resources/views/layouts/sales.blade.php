@@ -400,8 +400,8 @@
         @if(auth()->user()->isSales())
             <script>
                 (function() {
-                    const locationUpdateUrl = {{ route('api.location.update') }};
-                const attendanceStatusUrl = {{ route('sales.attendance.status') }};
+                    const locationUpdateUrl = @json(route('api.location.update'));
+                    const attendanceStatusUrl = @json(route('sales.attendance.status'));
                     const csrfMeta = document.querySelector('meta[name="csrf-token"]');
                     const csrfToken = csrfMeta ? csrfMeta.content : null;
                     const updateIntervalMs = 60000;
