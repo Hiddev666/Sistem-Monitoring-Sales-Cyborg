@@ -35,7 +35,7 @@
 
 @push('scripts')
 <script>
-    const salesLocationsUrl = '{{ route('api.dashboard.sales-locations') }}';
+    const salesLocationsUrl = '{{ route('api.dashboard.sales-locations', [], false) }}';
 
     const map = L.map('map').setView([-2.9796, 104.7557], 13);
 

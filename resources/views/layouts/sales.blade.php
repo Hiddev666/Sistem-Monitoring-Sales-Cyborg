@@ -400,8 +400,8 @@
         @if(auth()->user()->isSales())
             <script>
                 (function() {
-                    const locationUpdateUrl = @json(route('api.location.update'));
-                    const attendanceStatusUrl = @json(route('sales.attendance.status'));
+                    const locationUpdateUrl = @json(route('api.location.update', [], false));
+                    const attendanceStatusUrl = @json(route('sales.attendance.status', [], false));
                     const csrfMeta = document.querySelector('meta[name="csrf-token"]');
                     const csrfToken = csrfMeta ? csrfMeta.content : null;
                     const updateIntervalMs = 60000;
@@ -473,7 +473,7 @@
                             headers: {
                                 'Accept': 'application/json'
                             },
-                            credentials: 'same-origin'
+                            credentials: 'include'
                         })
                             .then(response => response.ok ? response.json() : null)
                             .then(data => {

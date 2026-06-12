@@ -223,7 +223,7 @@
     document.querySelectorAll('.checkin-btn').forEach(btn => {
         btn.addEventListener('click', function() {
             const jadwalKlienId = this.dataset.jadwalKlienId;
-            const checkinUrlTemplate = @json(route('sales.pjp.checkin-klien', ['jadwalKlien' => '__JADWAL_KLIEN__']));
+            const checkinUrlTemplate = @json(route('sales.pjp.checkin-klien', ['jadwalKlien' => '__JADWAL_KLIEN__'], false));
             const checkinUrl = checkinUrlTemplate.replace('__JADWAL_KLIEN__', jadwalKlienId);
             
             if (!navigator.geolocation) {

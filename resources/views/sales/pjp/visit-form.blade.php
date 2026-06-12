@@ -278,10 +278,10 @@
     let signaturePad = null;
     let jadwalKlienId = {{ $jadwalKlien->id }};
     let hasSignature = {{ $jadwalKlien->tanda_tangan ? 'true' : 'false' }};
-    const uploadPhotoUrlTemplate = @json(route('sales.pjp.upload-photo', ['jadwalKlien' => '__JADWAL_KLIEN__']));
-    const deletePhotoUrlTemplate = @json(route('sales.pjp.delete-photo', ['jadwalKlien' => '__JADWAL_KLIEN__']));
-    const uploadSignatureUrlTemplate = @json(route('sales.pjp.upload-signature', ['jadwalKlien' => '__JADWAL_KLIEN__']));
-    const submitFormUrlTemplate = @json(route('sales.pjp.submit-form', ['jadwalKlien' => '__JADWAL_KLIEN__']));
+    const uploadPhotoUrlTemplate = @json(route('sales.pjp.upload-photo', ['jadwalKlien' => '__JADWAL_KLIEN__'], false));
+    const deletePhotoUrlTemplate = @json(route('sales.pjp.delete-photo', ['jadwalKlien' => '__JADWAL_KLIEN__'], false));
+    const uploadSignatureUrlTemplate = @json(route('sales.pjp.upload-signature', ['jadwalKlien' => '__JADWAL_KLIEN__'], false));
+    const submitFormUrlTemplate = @json(route('sales.pjp.submit-form', ['jadwalKlien' => '__JADWAL_KLIEN__'], false));
     const uploadPhotoUrl = uploadPhotoUrlTemplate.replace('__JADWAL_KLIEN__', jadwalKlienId);
     const deletePhotoUrl = deletePhotoUrlTemplate.replace('__JADWAL_KLIEN__', jadwalKlienId);
     const uploadSignatureUrl = uploadSignatureUrlTemplate.replace('__JADWAL_KLIEN__', jadwalKlienId);
