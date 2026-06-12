@@ -1,11 +1,11 @@
 @extends('layouts.app')
 
-@section('title', auth()->user()?->isSuperAdmin() ? 'Super Admin Dashboard' : 'Admin Dashboard')
+@section('title', 'Admin Dashboard')
 
 @section('content')
 @php
     $authUser = auth()->user();
-    $isSuperAdmin = $authUser?->isSuperAdmin();
+    $canManageConfig = $authUser?->can('manage_config');
     $canViewReports = $authUser?->can('view_reports');
     $canExportReports = $authUser?->can('export_reports');
     $canViewKunjungan = $authUser?->can('view_kunjungan');
@@ -13,10 +13,10 @@
 <div class="row mb-4">
     <div class="col-md-12">
         <h2>
-            <i class="fas fa-gauge-high me-2"></i>{{ $isSuperAdmin ? 'Dashboard Super Administrator' : 'Dashboard Administrator' }}
+            <i class="fas fa-gauge-high me-2"></i>Dashboard Administrator
         </h2>
         <p class="text-muted">
-            {{ $isSuperAdmin ? 'Ringkasan penuh operasional, monitoring, dan konfigurasi sistem' : 'Ringkasan operasional sistem monitoring sales force' }}
+            Ringkasan operasional, monitoring, dan konfigurasi sistem
         </p>
     </div>
 </div>
@@ -213,16 +213,16 @@
     @endif
 </div>
 
-@if($isSuperAdmin)
+@if($canManageConfig)
 <div class="row mt-2">
     <div class="col-12 mb-3">
         <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0">
-                    <i class="fas fa-shield-halved me-2"></i>Kontrol Super Admin
-                </h5>
+                <div class="card-header">
+                    <h5 class="mb-0">
+                    <i class="fas fa-shield-halved me-2"></i>Konfigurasi Sistem
+                    </h5>
+                </div>
             </div>
-        </div>
     </div>
 
     <div class="col-md-6 col-xl-3 mb-4">
@@ -303,7 +303,7 @@
                             </a>
                         </div>
                     @endif
-                    @if($isSuperAdmin)
+                    @if($canManageConfig)
                         <div class="col-md-3">
                             <a href="{{ route('admin.configuration.index') }}" class="btn btn-outline-dark w-100 py-3">
                                 <i class="fas fa-cog mb-2 quick-action-icon"></i>

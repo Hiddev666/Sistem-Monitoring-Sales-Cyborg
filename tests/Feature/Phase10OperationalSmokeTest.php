@@ -49,12 +49,14 @@ class Phase10OperationalSmokeTest extends TestCase
         $this->actingAs($sales)->postJson(route('sales.pjp.upload-photo', $jadwalKlien), [
             'photo' => UploadedFile::fake()->image('checkin.jpg'),
             'type' => 'checkin',
+            'capture_source' => 'camera',
         ])->assertOk()
             ->assertJson(['success' => true]);
 
         $this->actingAs($sales)->postJson(route('sales.pjp.upload-photo', $jadwalKlien), [
             'photo' => UploadedFile::fake()->image('checkout.jpg'),
             'type' => 'checkout',
+            'capture_source' => 'camera',
         ])->assertOk()
             ->assertJson(['success' => true]);
 

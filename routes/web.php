@@ -110,7 +110,7 @@ Route::middleware(['auth', 'session.timeout'])->group(function () {
         Route::get('/dashboard', [ManagerDashboardController::class, 'index'])->name('dashboard');
     });
 
-    Route::middleware('role:admin,super_admin,manager')->prefix('manager')->name('manager.')->group(function () {
+    Route::middleware('role:admin,manager')->prefix('manager')->name('manager.')->group(function () {
         Route::prefix('analytics')->name('analytics.')->group(function () {
             Route::get('/dashboard', [AnalyticsController::class, 'adminDashboard'])->name('dashboard');
             Route::get('/sales-performance', [AnalyticsController::class, 'salesPerformance'])->name('sales-performance');
@@ -128,7 +128,7 @@ Route::middleware(['auth', 'session.timeout'])->group(function () {
     // ===========================
     // ADMIN ROUTES (Desktop)
     // ===========================
-    Route::middleware('role:admin,super_admin')->prefix('admin')->name('admin.')->group(function () {
+    Route::middleware('role:admin')->prefix('admin')->name('admin.')->group(function () {
         Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
         Route::get('/monitoring', [AdminMonitoringController::class, 'index'])->name('monitoring.index');
 
@@ -211,7 +211,7 @@ Route::middleware(['auth', 'session.timeout'])->group(function () {
     // ===========================
     // PHASE 5/8: DASHBOARD & REPORTING
     // ===========================
-    Route::middleware('role:admin,super_admin,manager')->prefix('admin')->name('admin.')->group(function () {
+    Route::middleware('role:admin,manager')->prefix('admin')->name('admin.')->group(function () {
         Route::prefix('analytics')->name('analytics.')->group(function () {
             Route::get('/dashboard', [AnalyticsController::class, 'adminDashboard'])->name('dashboard');
             Route::get('/sales-performance', [AnalyticsController::class, 'salesPerformance'])->name('sales-performance');
@@ -233,7 +233,7 @@ Route::middleware(['auth', 'session.timeout'])->group(function () {
     // Location Tracking & Dashboard API
     Route::prefix('api')->name('api.')->group(function () {
         Route::middleware('role:sales')->post('/location/update', [LocationController::class, 'updateLocation'])->name('location.update');
-        Route::middleware('role:manager,admin,super_admin')->group(function () {
+        Route::middleware('role:manager,admin')->group(function () {
             Route::get('/dashboard/sales-locations', [LocationController::class, 'salesLocations'])->name('dashboard.sales-locations');
             Route::get('/dashboard/statistics', [LocationController::class, 'dashboardStatistics'])->name('dashboard.statistics');
         });

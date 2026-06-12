@@ -37,7 +37,7 @@ class JadwalKunjunganSeeder extends Seeder
                     'tanggal' => $tanggal,
                     'keterangan' => 'Kunjungan rutin hari ' . $tanggal->dayName,
                     'status' => 'pending',
-                    'created_by' => 1, // Assume super_admin with id 1
+                    'created_by' => 1, // Assume admin with id 1
                 ]);
 
                 // Assign 3-5 random klien to this schedule

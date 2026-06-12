@@ -7,12 +7,25 @@ use App\Models\JadwalKlien;
 use App\Models\JadwalKunjungan;
 use App\Models\Klien;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 class SalesAttendanceCheckoutRuleTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        Carbon::setTestNow(Carbon::parse('2026-06-11 10:00:00'));
+    }
+
+    protected function tearDown(): void
+    {
+        Carbon::setTestNow();
+        parent::tearDown();
+    }
 
     public function test_checkout_is_blocked_when_active_schedule_has_unfinished_visits(): void
     {

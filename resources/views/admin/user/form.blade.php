@@ -4,15 +4,15 @@
 
 @section('content')
 @php
-    $isSuperAdmin = auth()->user()?->isSuperAdmin();
-    $isAdmin = auth()->user()?->isAdmin() && !$isSuperAdmin;
+    $canManageRoles = auth()->user()?->can('manage_roles');
+    $isAdmin = auth()->user()?->isAdmin();
 @endphp
 <div class="row mb-4">
     <div class="col-sm-6">
         <h1 class="h3">{{ isset($user) ? 'Edit User' : 'Tambah User Baru' }}</h1>
         <div class="text-muted mt-1">
-            @if($isSuperAdmin)
-                Super Admin dapat menetapkan semua role, termasuk admin dan manager.
+            @if($canManageRoles)
+                Admin dapat menetapkan role admin, manager, dan sales.
             @elseif($isAdmin)
                 Admin hanya dapat membuat atau memperbarui user role sales.
             @else
@@ -86,7 +86,7 @@
 
             <div class="row">
                 <div class="col-md-6 mb-3">
-                    @if($isSuperAdmin)
+                    @if($canManageRoles)
                         <label for="role" class="form-label">Role <span class="text-danger">*</span></label>
                         <select class="form-select @error('role') is-invalid @enderror" id="role" name="role" required>
                             <option value="">-- Pilih Role --</option>
@@ -97,7 +97,7 @@
                                 </option>
                             @endforeach
                         </select>
-                        <small class="text-muted d-block mt-1">Super Admin dapat memilih role apa pun, termasuk admin, manager, dan sales.</small>
+                        <small class="text-muted d-block mt-1">Admin dapat memilih role apa pun, termasuk admin, manager, dan sales.</small>
                         @error('role')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror

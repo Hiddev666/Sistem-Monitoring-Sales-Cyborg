@@ -15,7 +15,6 @@ class RoleSeeder extends Seeder
 
         // Create roles
         $roles = [
-            ['name' => 'super_admin', 'description' => 'Super Administrator - Full Access'],
             ['name' => 'admin', 'description' => 'Administrator - Data Management'],
             ['name' => 'manager', 'description' => 'Manager - Monitoring & Reporting (Read-Only)'],
             ['name' => 'sales', 'description' => 'Sales - Field Operations'],
@@ -72,13 +71,10 @@ class RoleSeeder extends Seeder
         }
 
         // Assign permissions to roles
-        $superAdminRole = Role::findByName('super_admin');
-        $superAdminRole->givePermissionTo(Permission::all());
-
         $adminRole = Role::findByName('admin');
         $adminRole->givePermissionTo([
-            'manage_users', 'manage_klien', 'manage_wilayah', 'create_pjp', 'edit_pjp', 'delete_pjp',
-            'view_attendance', 'view_kunjungan'
+            'manage_users', 'manage_roles', 'manage_klien', 'manage_wilayah', 'create_pjp', 'edit_pjp', 'delete_pjp',
+            'view_attendance', 'view_kunjungan', 'view_reports', 'export_reports', 'manage_config'
         ]);
 
         $managerRole = Role::findByName('manager');

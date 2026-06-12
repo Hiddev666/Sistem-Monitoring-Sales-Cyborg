@@ -10,11 +10,11 @@ use Illuminate\View\View;
 class ConfigurationController
 {
     /**
-     * Ensure only super admin can manage configuration.
+     * Ensure only admins with configuration permission can manage configuration.
      */
-    private function abortIfNotSuperAdmin(): void
+    private function abortIfNotAuthorized(): void
     {
-        abort_unless(auth()->user()?->isSuperAdmin(), 403, 'Anda tidak memiliki akses ke konfigurasi sistem.');
+        abort_unless(auth()->user()?->can('manage_config'), 403, 'Anda tidak memiliki akses ke konfigurasi sistem.');
     }
 
     /**
@@ -22,7 +22,7 @@ class ConfigurationController
      */
     public function index(): View
     {
-        $this->abortIfNotSuperAdmin();
+        $this->abortIfNotAuthorized();
 
         $gpsRadius = Configuration::getGpsRadiusTolerance();
         $sessionTimeout = Configuration::getValue('session_timeout_minutes', 120);
@@ -40,7 +40,7 @@ class ConfigurationController
      */
     public function update(Request $request): RedirectResponse
     {
-        $this->abortIfNotSuperAdmin();
+        $this->abortIfNotAuthorized();
 
         $validated = $request->validate([
             'gps_radius_tolerance' => ['required', 'integer', 'min:10', 'max:1000'],
@@ -73,7 +73,7 @@ class ConfigurationController
      */
     public function reset(): RedirectResponse
     {
-        $this->abortIfNotSuperAdmin();
+        $this->abortIfNotAuthorized();
 
         Configuration::setValue(
             Configuration::GPS_RADIUS_TOLERANCE_KEY,

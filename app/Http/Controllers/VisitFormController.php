@@ -62,7 +62,11 @@ class VisitFormController extends Controller
     {
         $request->validate([
             'photo' => 'required|image|mimes:jpeg,png,jpg,webp|max:5120',
-            'type' => 'required|in:checkin,checkout'
+            'type' => 'required|in:checkin,checkout',
+            'capture_source' => 'required|in:camera',
+        ], [
+            'capture_source.required' => 'Foto harus diambil dari kamera.',
+            'capture_source.in' => 'Foto harus diambil dari kamera handphone.',
         ]);
 
         if ($response = $this->authorizeEditableVisit($jadwalKlien)) {

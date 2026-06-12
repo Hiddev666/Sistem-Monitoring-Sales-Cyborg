@@ -222,11 +222,6 @@
             color: #fff;
         }
 
-        .badge-role.super_admin {
-            background-color: #dc3545;
-            color: #fff;
-        }
-
         .alert {
             border-radius: 0.5rem;
         }
@@ -262,8 +257,8 @@
         $isSales = $authUser?->isSales();
         $isManager = $authUser?->isManager();
         $isAdmin = $authUser?->isAdmin();
-        $isSuperAdmin = $authUser?->isSuperAdmin();
         $canManageUsers = $authUser?->can('manage_users');
+        $canManageConfig = $authUser?->can('manage_config');
         $canViewReports = $authUser?->can('view_reports');
         $canExportReports = $authUser?->can('export_reports');
         $canViewKunjungan = $authUser?->can('view_kunjungan');
@@ -279,7 +274,7 @@
         $monitoringActive = request()->routeIs('admin.monitoring.index', 'admin.analytics.*', 'manager.analytics.*', 'admin.photo-gallery.*');
         $scheduleAttendanceActive = request()->routeIs('admin.pjp.*', 'admin.attendance.*');
         $operationalActive = request()->routeIs('sales.pjp.*', 'sales.attendance.*');
-        $superAdminActive = request()->routeIs('admin.configuration.*');
+        $configurationActive = request()->routeIs('admin.configuration.*');
         $accountActive = request()->routeIs('password.*');
     @endphp
 
@@ -407,16 +402,16 @@
                     </div>
                 @endif
 
-                @if($isSuperAdmin)
+                @if($canManageConfig)
                     <div class="sidebar-section">
-                        <button class="sidebar-section-toggle {{ $superAdminActive ? '' : 'collapsed' }}" type="button" data-bs-toggle="collapse" data-bs-target="#sidebarSuperAdmin" aria-expanded="{{ $superAdminActive ? 'true' : 'false' }}" aria-controls="sidebarSuperAdmin">
+                        <button class="sidebar-section-toggle {{ $configurationActive ? '' : 'collapsed' }}" type="button" data-bs-toggle="collapse" data-bs-target="#sidebarConfiguration" aria-expanded="{{ $configurationActive ? 'true' : 'false' }}" aria-controls="sidebarConfiguration">
                             <span class="sidebar-section-title">
                                 <i class="fas fa-cog"></i>
-                                <span>Kontrol Super Admin</span>
+                                <span>Konfigurasi Sistem</span>
                             </span>
                             <i class="fas fa-chevron-down sidebar-section-caret"></i>
                         </button>
-                        <div class="collapse {{ $superAdminActive ? 'show' : '' }} sidebar-section-body" id="sidebarSuperAdmin">
+                        <div class="collapse {{ $configurationActive ? 'show' : '' }} sidebar-section-body" id="sidebarConfiguration">
                             <a class="nav-link {{ request()->routeIs('admin.configuration.*') ? 'active' : '' }}" href="{{ route('admin.configuration.index') }}">
                                 <i class="fas fa-cog"></i> Konfigurasi Sistem
                             </a>

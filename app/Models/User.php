@@ -85,12 +85,7 @@ class User extends Authenticatable
 
     public function isAdmin()
     {
-        return $this->hasRole('admin') || $this->hasRole('super_admin');
-    }
-
-    public function isSuperAdmin()
-    {
-        return $this->hasRole('super_admin');
+        return $this->hasRole('admin');
     }
 
     /**
@@ -99,7 +94,6 @@ class User extends Authenticatable
     public function getRoleLabel()
     {
         $labels = [
-            'super_admin' => 'Super Administration',
             'admin' => 'Administrator',
             'manager' => 'Manajer',
             'sales' => 'Sales',

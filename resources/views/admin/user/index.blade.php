@@ -7,7 +7,7 @@
     <div class="col-sm-6">
         <h1 class="h3 d-inline-block">Manajemen User</h1>
         <div class="text-muted mt-1">
-            Admin hanya dapat mengelola user role sales. Super Admin dapat mengelola seluruh user dan role.
+            Admin dapat mengelola seluruh user dan role yang tersedia.
         </div>
     </div>
     <div class="col-sm-6 text-end">
@@ -21,22 +21,14 @@
 
 <div class="alert alert-light border">
     <strong>Mode akses:</strong>
-    @if(($currentUserRole ?? '') === 'super_admin')
-        Anda masuk sebagai Super Admin. Seluruh data user dan role tersedia.
-    @else
-        Anda masuk sebagai Admin. Daftar user difokuskan ke user role sales.
-    @endif
+    Anda masuk sebagai Admin. Seluruh data user dan role tersedia.
 </div>
 
 <div class="card mb-4">
     <div class="card-body">
         <div class="d-flex flex-wrap gap-3 align-items-center">
-            <span class="badge bg-danger">Super Admin</span>
-            <span class="text-muted">Akses penuh, termasuk konfigurasi sistem dan pengelolaan role.</span>
-        </div>
-        <div class="d-flex flex-wrap gap-3 align-items-center mt-2">
             <span class="badge bg-primary">Admin</span>
-            <span class="text-muted">Fokus pada user sales, master data, PJP, absensi, dan monitoring.</span>
+            <span class="text-muted">Akses penuh untuk pengelolaan user, role, dan konfigurasi sistem.</span>
         </div>
     </div>
 </div>

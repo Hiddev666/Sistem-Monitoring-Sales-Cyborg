@@ -19,17 +19,6 @@ class CreateTestUsersSeeder extends Seeder
             'keterangan' => 'Wilayah utama untuk operasional Jakarta',
         ]);
 
-        // Create Super Admin
-        $superAdmin = User::create([
-            'name' => 'Super Admin',
-            'email' => 'super_admin@sistem.test',
-            'password' => bcrypt('password'),
-            'phone' => '081234567890',
-            'wilayah_id' => $wilayah->id,
-            'is_active' => true,
-        ]);
-        $superAdmin->assignRole('super_admin');
-
         // Create Admin
         $admin = User::create([
             'name' => 'Admin',
@@ -87,7 +76,6 @@ class CreateTestUsersSeeder extends Seeder
         $this->command->table(
             ['Name', 'Email', 'Role'],
             [
-                ['Super Admin', 'super_admin@sistem.test', 'super_admin'],
                 ['Admin', 'admin@sistem.test', 'admin'],
                 ['Manager', 'manager@sistem.test', 'manager'],
                 ['Sales', 'sales@sistem.test', 'sales'],

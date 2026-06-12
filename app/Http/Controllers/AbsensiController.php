@@ -6,6 +6,7 @@ use App\Models\Absensi;
 use App\Models\JadwalKlien;
 use App\Models\JadwalKunjungan;
 use App\Services\GpsValidationService;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -24,6 +25,7 @@ class AbsensiController extends Controller
     public function index()
     {
         $user = auth()->user();
+        $attendanceWindow = $this->getAttendanceWindowState();
         
         // Get today's attendance
         $todayAbsensi = Absensi::todayFor($user->id);
@@ -37,6 +39,7 @@ class AbsensiController extends Controller
         return view('sales.attendance.index', [
             'todayAbsensi' => $todayAbsensi,
             'recentAbsensi' => $recentAbsensi,
+            'attendanceWindow' => $attendanceWindow,
         ]);
     }
 
@@ -46,6 +49,13 @@ class AbsensiController extends Controller
      */
     public function checkIn(Request $request)
     {
+        if (!$this->isWithinAttendanceWindow()) {
+            return response()->json([
+                'success' => false,
+                'message' => $this->attendanceWindowErrorMessage(),
+            ], 400);
+        }
+
         $validated = $request->validate([
             'latitude' => 'required|numeric|between:-90,90',
             'longitude' => 'required|numeric|between:-180,180',
@@ -107,6 +117,13 @@ class AbsensiController extends Controller
      */
     public function checkOut(Request $request)
     {
+        if (!$this->isWithinAttendanceWindow()) {
+            return response()->json([
+                'success' => false,
+                'message' => $this->attendanceWindowErrorMessage(),
+            ], 400);
+        }
+
         $validated = $request->validate([
             'latitude' => 'required|numeric|between:-90,90',
             'longitude' => 'required|numeric|between:-180,180',
@@ -311,5 +328,34 @@ class AbsensiController extends Controller
                 JadwalKlien::STATUS_SKIPPED,
             ])
             ->exists();
+    }
+
+    private function isWithinAttendanceWindow(?Carbon $now = null): bool
+    {
+        $currentTime = $now ?? Carbon::now();
+        $windowStart = Carbon::today()->setTime(8, 0, 0);
+        $windowEnd = Carbon::today()->setTime(16, 30, 0);
+
+        return $currentTime->betweenIncluded($windowStart, $windowEnd);
+    }
+
+    private function attendanceWindowErrorMessage(): string
+    {
+        return 'Absensi hanya dapat dilakukan antara pukul 08:00 sampai 16:30.';
+    }
+
+    private function getAttendanceWindowState(): array
+    {
+        $now = Carbon::now();
+        $windowStart = Carbon::today()->setTime(8, 0, 0);
+        $windowEnd = Carbon::today()->setTime(16, 30, 0);
+
+        return [
+            'is_open' => $now->betweenIncluded($windowStart, $windowEnd),
+            'current_time' => $now->format('H:i:s'),
+            'window_start' => $windowStart->format('H:i'),
+            'window_end' => $windowEnd->format('H:i'),
+            'message' => $this->attendanceWindowErrorMessage(),
+        ];
     }
 }

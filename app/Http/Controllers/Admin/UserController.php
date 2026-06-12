@@ -14,7 +14,6 @@ use Spatie\Permission\Models\Role;
 class UserController
 {
     private const ROLE_LABELS = [
-        'super_admin' => 'Super Admin',
         'admin' => 'Admin',
         'manager' => 'Manager',
         'sales' => 'Sales',
@@ -35,7 +34,7 @@ class UserController
 
     private function canManageUser(User $user): bool
     {
-        return $this->actingUser()->isSuperAdmin() || $user->hasRole('sales') || $user->roles->isEmpty();
+        return $this->actingUser()->isAdmin();
     }
 
     private function getRoleOptions(): Collection
@@ -69,7 +68,7 @@ class UserController
     {
         $baseQuery = User::with('roles', 'wilayah');
 
-        if (!$request->user()?->isSuperAdmin()) {
+        if (!$request->user()?->can('manage_roles')) {
             $baseQuery->whereHas('roles', function ($roleQuery) {
                 $roleQuery->where('name', 'sales');
             });
@@ -127,7 +126,6 @@ class UserController
                 'role' => $roleName !== '-' ? sprintf(
                     '<span class="badge bg-%s">%s</span>',
                     match ($roleName) {
-                        'super_admin' => 'danger',
                         'admin' => 'primary',
                         'manager' => 'info',
                         'sales' => 'warning',

@@ -4,9 +4,33 @@
 
 @section('content')
 <div class="container-fluid mt-4">
+    @php
+        $attendanceWindowOpen = $attendanceWindow['is_open'] ?? true;
+        $attendanceWindowMessage = $attendanceWindow['message'] ?? 'Absensi hanya dapat dilakukan antara pukul 08:00 sampai 16:30.';
+        $attendanceWindowLabel = ($attendanceWindow['window_start'] ?? '08:00') . ' - ' . ($attendanceWindow['window_end'] ?? '16:30');
+    @endphp
+
     <div class="row mb-4">
         <div class="col-md-12">
             <h2 class="mb-3"><i class="fas fa-clock"></i> Absensi Hari Ini</h2>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="alert {{ $attendanceWindowOpen ? 'alert-success' : 'alert-warning' }}">
+                <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
+                    <div>
+                        <strong>Jam operasional absensi:</strong> {{ $attendanceWindowLabel }}
+                        <div class="small mt-1">
+                            {{ $attendanceWindowOpen ? 'Absensi sedang tersedia saat ini.' : $attendanceWindowMessage }}
+                        </div>
+                    </div>
+                    <span class="badge {{ $attendanceWindowOpen ? 'bg-success' : 'bg-warning text-dark' }}">
+                        {{ $attendanceWindowOpen ? 'Aktif' : 'Di luar jam absensi' }}
+                    </span>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -23,6 +47,15 @@
                         <p class="text-muted">Waktu masuk: <strong>{{ $todayAbsensi->waktu_masuk }}</strong></p>
                         <button class="btn btn-success btn-sm" disabled>
                             <i class="fas fa-check"></i> Sudah Check-In
+                        </button>
+                    @elseif(!$attendanceWindowOpen)
+                        <h5 class="card-title">Check-In</h5>
+                        <p class="text-warning display-6">
+                            <i class="fas fa-clock"></i>
+                        </p>
+                        <p class="text-muted">Tersedia pada jam {{ $attendanceWindowLabel }}</p>
+                        <button class="btn btn-primary" disabled>
+                            <i class="fas fa-door-open"></i> Check-In
                         </button>
                     @else
                         <h5 class="card-title">Check-In</h5>
@@ -49,6 +82,15 @@
                         <p class="text-muted">Durasi: <strong>{{ floor($todayAbsensi->total_jam / 60) }}h {{ $todayAbsensi->total_jam % 60 }}m</strong></p>
                         <button class="btn btn-success btn-sm" disabled>
                             <i class="fas fa-check"></i> Sudah Check-Out
+                        </button>
+                    @elseif(!$attendanceWindowOpen)
+                        <h5 class="card-title">Check-Out</h5>
+                        <p class="text-warning display-6">
+                            <i class="fas fa-clock"></i>
+                        </p>
+                        <p class="text-muted">Tersedia pada jam {{ $attendanceWindowLabel }}</p>
+                        <button class="btn btn-warning" disabled>
+                            <i class="fas fa-door-closed"></i> Check-Out
                         </button>
                     @elseif($todayAbsensi && $todayAbsensi->waktu_masuk)
                         <h5 class="card-title">Check-Out</h5>

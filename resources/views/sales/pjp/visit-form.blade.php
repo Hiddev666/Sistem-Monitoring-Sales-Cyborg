@@ -34,7 +34,7 @@
                                 <label class="form-label"><strong>Foto Check-in</strong></label>
                                 <div id="checkinPhotoContainer" class="text-center" style="border: 2px dashed #ccc; padding: 40px; border-radius: 8px;">
                                     @if($jadwalKlien->foto_checkin)
-                                        <img src="{{ $jadwalKlien->getFotoCheckinUrl() }}" alt="Check-in" class="img-fluid rounded" style="max-height: 300px;">
+                                        <img src="{{ $jadwalKlien->getFotoCheckinUrl() }}" alt="Check-in" class="img-fluid rounded" style="max-height: 300px;" data-photo-state="saved" data-photo-type="checkin">
                                         <div class="mt-2">
                                             <button type="button" class="btn btn-sm btn-danger" onclick="deletePhoto('checkin')">
                                                 <i class="fas fa-trash"></i> Hapus
@@ -42,10 +42,25 @@
                                         </div>
                                     @else
                                         <p class="text-muted mb-3">Belum ada foto check-in</p>
-                                        <input type="file" id="checkinPhotoInput" accept="image/*" class="d-none" onchange="handlePhotoSelect('checkin', this.files[0], this)">
-                                        <button type="button" class="btn btn-outline-primary" onclick="document.getElementById('checkinPhotoInput').click()">
-                                            <i class="fas fa-camera"></i> Ambil Foto Check-in
-                                        </button>
+                                        <div id="checkinCameraStage" class="mb-3 d-none">
+                                            <video id="checkinVideo" class="img-fluid rounded border w-100" style="max-height: 300px; background: #111;" autoplay playsinline muted></video>
+                                            <img id="checkinPreview" class="img-fluid rounded d-none w-100" style="max-height: 300px;" alt="Preview check-in">
+                                        </div>
+                                        <div class="d-flex flex-wrap gap-2 justify-content-center">
+                                            <button type="button" class="btn btn-outline-primary" id="checkinStartBtn" onclick="startCamera('checkin', this)">
+                                                <i class="fas fa-video"></i> Nyalakan Kamera
+                                            </button>
+                                            <button type="button" class="btn btn-outline-secondary d-none" id="checkinRetakeBtn" onclick="retakePhoto('checkin')">
+                                                <i class="fas fa-redo"></i> Ambil Ulang
+                                            </button>
+                                            <button type="button" class="btn btn-primary d-none" id="checkinCaptureBtn" onclick="capturePhoto('checkin', this)">
+                                                <i class="fas fa-camera"></i> Ambil Foto
+                                            </button>
+                                            <button type="button" class="btn btn-success d-none" id="checkinUploadBtn" onclick="uploadCapturedPhoto('checkin', this)">
+                                                <i class="fas fa-cloud-upload-alt"></i> Upload Foto
+                                            </button>
+                                        </div>
+                                        <small class="text-muted d-block mt-3">Gunakan kamera handphone untuk bukti check-in. File dari galeri tidak digunakan.</small>
                                     @endif
                                 </div>
                                 <small class="text-muted d-block mt-2">Max 5MB, format: JPG, PNG, WebP</small>
@@ -56,7 +71,7 @@
                                 <label class="form-label"><strong>Foto Check-out</strong></label>
                                 <div id="checkoutPhotoContainer" class="text-center" style="border: 2px dashed #ccc; padding: 40px; border-radius: 8px;">
                                     @if($jadwalKlien->foto_checkout)
-                                        <img src="{{ $jadwalKlien->getFotoCheckoutUrl() }}" alt="Check-out" class="img-fluid rounded" style="max-height: 300px;">
+                                        <img src="{{ $jadwalKlien->getFotoCheckoutUrl() }}" alt="Check-out" class="img-fluid rounded" style="max-height: 300px;" data-photo-state="saved" data-photo-type="checkout">
                                         <div class="mt-2">
                                             <button type="button" class="btn btn-sm btn-danger" onclick="deletePhoto('checkout')">
                                                 <i class="fas fa-trash"></i> Hapus
@@ -64,10 +79,25 @@
                                         </div>
                                     @else
                                         <p class="text-muted mb-3">Belum ada foto check-out</p>
-                                        <input type="file" id="checkoutPhotoInput" accept="image/*" class="d-none" onchange="handlePhotoSelect('checkout', this.files[0], this)">
-                                        <button type="button" class="btn btn-outline-primary" onclick="document.getElementById('checkoutPhotoInput').click()">
-                                            <i class="fas fa-camera"></i> Ambil Foto Check-out
-                                        </button>
+                                        <div id="checkoutCameraStage" class="mb-3 d-none">
+                                            <video id="checkoutVideo" class="img-fluid rounded border w-100" style="max-height: 300px; background: #111;" autoplay playsinline muted></video>
+                                            <img id="checkoutPreview" class="img-fluid rounded d-none w-100" style="max-height: 300px;" alt="Preview check-out">
+                                        </div>
+                                        <div class="d-flex flex-wrap gap-2 justify-content-center">
+                                            <button type="button" class="btn btn-outline-primary" id="checkoutStartBtn" onclick="startCamera('checkout', this)">
+                                                <i class="fas fa-video"></i> Nyalakan Kamera
+                                            </button>
+                                            <button type="button" class="btn btn-outline-secondary d-none" id="checkoutRetakeBtn" onclick="retakePhoto('checkout')">
+                                                <i class="fas fa-redo"></i> Ambil Ulang
+                                            </button>
+                                            <button type="button" class="btn btn-primary d-none" id="checkoutCaptureBtn" onclick="capturePhoto('checkout', this)">
+                                                <i class="fas fa-camera"></i> Ambil Foto
+                                            </button>
+                                            <button type="button" class="btn btn-success d-none" id="checkoutUploadBtn" onclick="uploadCapturedPhoto('checkout', this)">
+                                                <i class="fas fa-cloud-upload-alt"></i> Upload Foto
+                                            </button>
+                                        </div>
+                                        <small class="text-muted d-block mt-3">Gunakan kamera handphone untuk bukti check-out. File dari galeri tidak digunakan.</small>
                                     @endif
                                 </div>
                                 <small class="text-muted d-block mt-2">Max 5MB, format: JPG, PNG, WebP</small>
@@ -283,15 +313,172 @@
         updateChecklist();
     });
 
-    function handlePhotoSelect(type, file, input) {
-        if (!file) return;
+    const cameraState = {
+        checkin: { stream: null, blob: null, previewUrl: null },
+        checkout: { stream: null, blob: null, previewUrl: null },
+    };
 
+    function getCameraElements(type) {
+        return {
+            stage: document.getElementById(`${type}CameraStage`),
+            video: document.getElementById(`${type}Video`),
+            preview: document.getElementById(`${type}Preview`),
+            startBtn: document.getElementById(`${type}StartBtn`),
+            captureBtn: document.getElementById(`${type}CaptureBtn`),
+            uploadBtn: document.getElementById(`${type}UploadBtn`),
+            retakeBtn: document.getElementById(`${type}RetakeBtn`),
+        };
+    }
+
+    function stopCamera(type) {
+        const state = cameraState[type];
+        if (state?.stream) {
+            state.stream.getTracks().forEach(track => track.stop());
+            state.stream = null;
+        }
+    }
+
+    function resetCaptureState(type) {
+        const state = cameraState[type];
+        if (state?.previewUrl) {
+            URL.revokeObjectURL(state.previewUrl);
+        }
+        state.blob = null;
+        state.previewUrl = null;
+    }
+
+    async function startCamera(type, button) {
+        const elements = getCameraElements(type);
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            showAlert('danger', 'Browser Anda tidak mendukung kamera. Gunakan perangkat yang memiliki kamera aktif.');
+            return;
+        }
+
+        button.disabled = true;
+        button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Membuka kamera...';
+
+        try {
+            stopCamera(type);
+            resetCaptureState(type);
+
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: {
+                    facingMode: { ideal: 'environment' }
+                },
+                audio: false
+            });
+
+            cameraState[type].stream = stream;
+            elements.stage?.classList.remove('d-none');
+            if (elements.video) {
+                elements.video.srcObject = stream;
+                elements.video.classList.remove('d-none');
+            }
+            elements.preview?.classList.add('d-none');
+            elements.startBtn?.classList.add('d-none');
+            elements.captureBtn?.classList.remove('d-none');
+            elements.retakeBtn?.classList.add('d-none');
+            elements.uploadBtn?.classList.add('d-none');
+        } catch (error) {
+            showAlert('danger', 'Tidak dapat mengakses kamera: ' + error.message);
+        } finally {
+            button.disabled = false;
+            button.innerHTML = '<i class="fas fa-video"></i> Nyalakan Kamera';
+        }
+    }
+
+    function capturePhoto(type, button) {
+        const state = cameraState[type];
+        const elements = getCameraElements(type);
+
+        if (!state?.stream || !elements.video) {
+            showAlert('danger', 'Kamera belum aktif. Nyalakan kamera terlebih dahulu.');
+            return;
+        }
+
+        if (elements.video.readyState < 2) {
+            showAlert('warning', 'Kamera masih memuat. Tunggu sebentar lalu coba lagi.');
+            return;
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = elements.video.videoWidth;
+        canvas.height = elements.video.videoHeight;
+        const context = canvas.getContext('2d');
+        context.drawImage(elements.video, 0, 0, canvas.width, canvas.height);
+
+        canvas.toBlob((blob) => {
+            if (!blob) {
+                showAlert('danger', 'Gagal mengambil foto dari kamera.');
+                return;
+            }
+
+            stopCamera(type);
+            resetCaptureState(type);
+            state.blob = blob;
+            state.previewUrl = URL.createObjectURL(blob);
+
+            if (elements.video) {
+                elements.video.classList.add('d-none');
+            }
+            if (elements.preview) {
+                elements.preview.src = state.previewUrl;
+                elements.preview.classList.remove('d-none');
+            }
+            elements.captureBtn?.classList.add('d-none');
+            elements.uploadBtn?.classList.remove('d-none');
+            elements.retakeBtn?.classList.remove('d-none');
+
+            showAlert('success', 'Foto berhasil diambil dari kamera. Silakan upload.');
+        }, 'image/jpeg', 0.92);
+
+        button.disabled = false;
+    }
+
+    function retakePhoto(type) {
+        const state = cameraState[type];
+        const elements = getCameraElements(type);
+
+        resetCaptureState(type);
+        if (elements.preview) {
+            elements.preview.classList.add('d-none');
+            elements.preview.removeAttribute('src');
+        }
+        elements.uploadBtn?.classList.add('d-none');
+        elements.retakeBtn?.classList.add('d-none');
+        elements.captureBtn?.classList.remove('d-none');
+
+        const startButton = elements.startBtn;
+        if (startButton) {
+            startButton.classList.remove('d-none');
+            startButton.disabled = false;
+        }
+
+        if (elements.stage) {
+            elements.stage.classList.remove('d-none');
+        }
+
+        if (state?.stream) {
+            stopCamera(type);
+        }
+    }
+
+    function uploadCapturedPhoto(type, button) {
+        const state = cameraState[type];
+
+        if (!state?.blob) {
+            showAlert('danger', 'Ambil foto dari kamera terlebih dahulu.');
+            return;
+        }
+
+        const file = new File([state.blob], `${type}-camera-${Date.now()}.jpg`, { type: 'image/jpeg' });
         const formData = new FormData();
         formData.append('photo', file);
         formData.append('type', type);
+        formData.append('capture_source', 'camera');
 
-        const uploadButton = input;
-        uploadButton.disabled = true;
+        button.disabled = true;
+        button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Mengunggah...';
 
         fetch(uploadPhotoUrl, {
             method: 'POST',
@@ -318,13 +505,14 @@
                 const containerId = type === 'checkin' ? 'checkinPhotoContainer' : 'checkoutPhotoContainer';
                 const container = document.getElementById(containerId);
                 container.innerHTML = `
-                    <img src="${data.photo.url}" alt="${type}" class="img-fluid rounded" style="max-height: 300px;">
+                    <img src="${data.photo.url}" alt="${type}" class="img-fluid rounded" style="max-height: 300px;" data-photo-state="saved" data-photo-type="${type}">
                     <div class="mt-2">
                         <button type="button" class="btn btn-sm btn-danger" onclick="deletePhoto('${type}')">
                             <i class="fas fa-trash"></i> Hapus
                         </button>
                     </div>
                 `;
+                resetCaptureState(type);
                 updateChecklist();
             } else {
                 showAlert('danger', data.message);
@@ -335,7 +523,8 @@
             showAlert('danger', error.message || 'Gagal mengunggah foto');
         })
         .finally(() => {
-            uploadButton.disabled = false;
+            button.disabled = false;
+            button.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> Upload Foto';
         });
     }
 
@@ -353,20 +542,43 @@
             if (data.success) {
                 showAlert('success', data.message);
                 const containerId = type === 'checkin' ? 'checkinPhotoContainer' : 'checkoutPhotoContainer';
-                const inputId = type === 'checkin' ? 'checkinPhotoInput' : 'checkoutPhotoInput';
                 const container = document.getElementById(containerId);
-                container.innerHTML = `
-                    <p class="text-muted mb-3">Belum ada foto ${type === 'checkin' ? 'check-in' : 'check-out'}</p>
-                    <input type="file" id="${inputId}" accept="image/*" class="d-none" onchange="handlePhotoSelect('${type}', this.files[0], this)">
-                    <button type="button" class="btn btn-outline-primary" onclick="document.getElementById('${inputId}').click()">
-                        <i class="fas fa-camera"></i> Ambil Foto ${type === 'checkin' ? 'Check-in' : 'Check-out'}
-                    </button>
-                `;
+                container.innerHTML = getEmptyCameraTemplate(type);
+                stopCamera(type);
+                resetCaptureState(type);
                 updateChecklist();
             } else {
                 showAlert('danger', data.message);
             }
         });
+    }
+
+    function getEmptyCameraTemplate(type) {
+        const label = type === 'checkin' ? 'check-in' : 'check-out';
+        const displayLabel = type === 'checkin' ? 'Check-in' : 'Check-out';
+
+        return `
+            <p class="text-muted mb-3">Belum ada foto ${label}</p>
+            <div id="${type}CameraStage" class="mb-3 d-none">
+                <video id="${type}Video" class="img-fluid rounded border w-100" style="max-height: 300px; background: #111;" autoplay playsinline muted></video>
+                <img id="${type}Preview" class="img-fluid rounded d-none w-100" style="max-height: 300px;" alt="Preview ${label}">
+            </div>
+            <div class="d-flex flex-wrap gap-2 justify-content-center">
+                <button type="button" class="btn btn-outline-primary" id="${type}StartBtn" onclick="startCamera('${type}', this)">
+                    <i class="fas fa-video"></i> Nyalakan Kamera
+                </button>
+                <button type="button" class="btn btn-outline-secondary d-none" id="${type}RetakeBtn" onclick="retakePhoto('${type}')">
+                    <i class="fas fa-redo"></i> Ambil Ulang
+                </button>
+                <button type="button" class="btn btn-primary d-none" id="${type}CaptureBtn" onclick="capturePhoto('${type}', this)">
+                    <i class="fas fa-camera"></i> Ambil Foto
+                </button>
+                <button type="button" class="btn btn-success d-none" id="${type}UploadBtn" onclick="uploadCapturedPhoto('${type}', this)">
+                    <i class="fas fa-cloud-upload-alt"></i> Upload Foto
+                </button>
+            </div>
+            <small class="text-muted d-block mt-3">Gunakan kamera handphone untuk bukti ${label}. File dari galeri tidak digunakan.</small>
+        `;
     }
 
     function saveSignature() {
@@ -464,10 +676,8 @@
 
     function updateChecklist() {
         // Check photos
-        const hasCheckInPhoto = document.querySelector('[src*="check-in"]') || 
-                               document.querySelector('#checkinPhotoContainer img');
-        const hasCheckOutPhoto = document.querySelector('[src*="check-out"]') || 
-                                document.querySelector('#checkoutPhotoContainer img');
+        const hasCheckInPhoto = !!document.querySelector('#checkinPhotoContainer img[data-photo-state="saved"]');
+        const hasCheckOutPhoto = !!document.querySelector('#checkoutPhotoContainer img[data-photo-state="saved"]');
         
         updateChecklistItem('checkPhotos', hasCheckInPhoto && hasCheckOutPhoto);
 
@@ -579,7 +789,10 @@
     document.getElementById('hasilTipe').addEventListener('change', updateChecklist);
     document.getElementById('catatanKunjungan').addEventListener('input', updateChecklist);
 
-    window.handlePhotoSelect = handlePhotoSelect;
+    window.startCamera = startCamera;
+    window.capturePhoto = capturePhoto;
+    window.retakePhoto = retakePhoto;
+    window.uploadCapturedPhoto = uploadCapturedPhoto;
     window.deletePhoto = deletePhoto;
     window.saveSignature = saveSignature;
     window.clearSignature = clearSignature;
