@@ -2,11 +2,11 @@
 
 @section('content')
 @php
-    $isManager = auth()->user()?->isManager();
-    $analyticsDashboardRoute = $isManager ? 'manager.analytics.dashboard' : 'admin.analytics.dashboard';
-    $salesPerformanceRoute = $isManager ? 'manager.analytics.sales-performance' : 'admin.analytics.sales-performance';
-    $klienAnalysisRoute = $isManager ? 'manager.analytics.klien-analysis' : 'admin.analytics.klien-analysis';
-    $regionalPerformanceRoute = $isManager ? 'manager.analytics.regional-performance' : 'admin.analytics.regional-performance';
+$isManager = auth()->user()?->isManager();
+$analyticsDashboardRoute = $isManager ? 'manager.analytics.dashboard' : 'admin.analytics.dashboard';
+$salesPerformanceRoute = $isManager ? 'manager.analytics.sales-performance' : 'admin.analytics.sales-performance';
+$klienAnalysisRoute = $isManager ? 'manager.analytics.klien-analysis' : 'admin.analytics.klien-analysis';
+$regionalPerformanceRoute = $isManager ? 'manager.analytics.regional-performance' : 'admin.analytics.regional-performance';
 @endphp
 <div class="container-fluid py-4">
     <!-- Header -->
@@ -80,8 +80,8 @@
                     <h2 class="mb-0">{{ $stats['avg_visit_duration'] }} min</h2>
                 </div>
             </div>
+        </div>
     </div>
-</div>
 
     <!-- Charts Section -->
     <div class="row mb-4">
@@ -130,20 +130,20 @@
                             </thead>
                             <tbody>
                                 @forelse($topSalesReps as $rep)
-                                    <tr>
-                                        <td {{ $loop->first ? 'class=text-primary font-weight-bold' : '' }}>
-                                            {{ $rep->name }}
-                                            @if($loop->first)
-                                                <i class="fas fa-crown text-warning ms-1"></i>
-                                            @endif
-                                        </td>
-                                        <td>{{ $rep->visits }}</td>
-                                        <td>Rp {{ number_format($rep->revenue, 0, ',', '.') }}</td>
-                                    </tr>
+                                <tr>
+                                    <td {{ $loop->first ? 'class=text-primary font-weight-bold' : '' }}>
+                                        {{ $rep->name }}
+                                        @if($loop->first)
+                                        <i class="fas fa-crown text-warning ms-1"></i>
+                                        @endif
+                                    </td>
+                                    <td>{{ $rep->visits }}</td>
+                                    <td>Rp {{ number_format($rep->revenue, 0, ',', '.') }}</td>
+                                </tr>
                                 @empty
-                                    <tr>
-                                        <td colspan="3" class="text-center text-muted">Belum ada data</td>
-                                    </tr>
+                                <tr>
+                                    <td colspan="3" class="text-center text-muted">Belum ada data</td>
+                                </tr>
                                 @endforelse
                             </tbody>
                         </table>
@@ -175,20 +175,20 @@
                             </thead>
                             <tbody>
                                 @forelse($topKlien as $klien)
-                                    <tr>
-                                        <td {{ $loop->first ? 'class=text-success font-weight-bold' : '' }}>
-                                            {{ $klien->nama_klien }}
-                                            @if($loop->first)
-                                                <i class="fas fa-crown text-warning ms-1"></i>
-                                            @endif
-                                        </td>
-                                        <td>{{ $klien->visits }}</td>
-                                        <td>Rp {{ number_format($klien->revenue, 0, ',', '.') }}</td>
-                                    </tr>
+                                <tr>
+                                    <td {{ $loop->first ? 'class=text-success font-weight-bold' : '' }}>
+                                        {{ $klien->nama_klien }}
+                                        @if($loop->first)
+                                        <i class="fas fa-crown text-warning ms-1"></i>
+                                        @endif
+                                    </td>
+                                    <td>{{ $klien->visits }}</td>
+                                    <td>Rp {{ number_format($klien->revenue, 0, ',', '.') }}</td>
+                                </tr>
                                 @empty
-                                    <tr>
-                                        <td colspan="3" class="text-center text-muted">Belum ada data</td>
-                                    </tr>
+                                <tr>
+                                    <td colspan="3" class="text-center text-muted">Belum ada data</td>
+                                </tr>
                                 @endforelse
                             </tbody>
                         </table>
@@ -234,9 +234,11 @@
                     <a href="{{ route($regionalPerformanceRoute) }}" class="btn btn-outline-warning me-2 mb-2">
                         <i class="fas fa-map"></i> Performa Regional
                     </a>
+                    @if (!auth()->user()->hasRole("manager"))
                     <a href="{{ route('admin.photo-gallery.index') }}" class="btn btn-outline-info me-2 mb-2">
                         <i class="fas fa-images"></i> Galeri Foto
                     </a>
+                    @endif
                 </div>
             </div>
         </div>
@@ -249,8 +251,10 @@
 <script>
     // Results Chart
     const resultsCtx = document.getElementById('resultsChart').getContext('2d');
-    const resultsData = {!! json_encode($resultsBreakdown) !!};
-    
+    const resultsData = {
+        !!json_encode($resultsBreakdown) !!
+    };
+
     new Chart(resultsCtx, {
         type: 'doughnut',
         data: {
@@ -266,15 +270,19 @@
             responsive: true,
             maintainAspectRatio: true,
             plugins: {
-                legend: { position: 'bottom' }
+                legend: {
+                    position: 'bottom'
+                }
             }
         }
     });
 
     // Trend Chart
     const trendCtx = document.getElementById('trendChart').getContext('2d');
-    const trendData = {!! json_encode($dailyTrend) !!};
-    
+    const trendData = {
+        !!json_encode($dailyTrend) !!
+    };
+
     new Chart(trendCtx, {
         type: 'line',
         data: {
@@ -297,14 +305,20 @@
         },
         options: {
             responsive: true,
-            plugins: { legend: { position: 'bottom' } }
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
         }
     });
 
     // Revenue Chart
     const revenueCtx = document.getElementById('revenueChart').getContext('2d');
-    const revenueData = {!! json_encode($revenueByRep) !!};
-    
+    const revenueData = {
+        !!json_encode($revenueByRep) !!
+    };
+
     new Chart(revenueCtx, {
         type: 'bar',
         data: {
@@ -318,7 +332,11 @@
         options: {
             responsive: true,
             indexAxis: 'y',
-            plugins: { legend: { display: false } }
+            plugins: {
+                legend: {
+                    display: false
+                }
+            }
         }
     });
 </script>

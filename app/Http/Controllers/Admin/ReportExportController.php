@@ -46,13 +46,15 @@ class ReportExportController
     public function klienAnalysis(Request $request): BinaryFileResponse
     {
         $validated = $this->validatedFilters($request, [
+            'search' => ['nullable', 'string', 'max:255'],
             'format' => ['nullable', 'in:xlsx,pdf'],
         ]);
         $wilayahId = $this->effectiveWilayahId($request);
+        $search = $validated['search'] ?? null;
 
         $path = ($validated['format'] ?? 'xlsx') === 'pdf'
-            ? $this->reportService->generateKlienAnalysisPdf($validated['start_date'], $validated['end_date'], $wilayahId)
-            : $this->reportService->generateKlienAnalysisReport($validated['start_date'], $validated['end_date'], $wilayahId);
+            ? $this->reportService->generateKlienAnalysisPdf($validated['start_date'], $validated['end_date'], $wilayahId, $search)
+            : $this->reportService->generateKlienAnalysisReport($validated['start_date'], $validated['end_date'], $wilayahId, $search);
 
         return response()->download($path)->deleteFileAfterSend();
     }

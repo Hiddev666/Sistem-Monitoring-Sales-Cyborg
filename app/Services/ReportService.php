@@ -124,7 +124,7 @@ class ReportService
     /**
      * Generate Klien Analysis Report
      */
-    public function generateKlienAnalysisReport($startDate, $endDate, $wilayahId = null)
+    public function generateKlienAnalysisReport($startDate, $endDate, $wilayahId = null, ?string $search = null)
     {
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
@@ -151,6 +151,12 @@ class ReportService
 
         $klien = Klien::query()
             ->when($wilayahId !== null, fn ($q) => $q->where('wilayah_id', $wilayahId))
+            ->when($search !== null && trim($search) !== '', function ($query) use ($search) {
+                $query->where(function ($subQuery) use ($search) {
+                    $subQuery->where('nama_klien', 'like', '%' . trim($search) . '%')
+                        ->orWhere('alamat', 'like', '%' . trim($search) . '%');
+                });
+            })
             ->get();
         $row = 5;
         $no = 1;
@@ -358,10 +364,16 @@ class ReportService
         return $this->writePdf('Laporan Performa Regional', $startDate, $endDate, $rows, 'performa_regional');
     }
 
-    public function generateKlienAnalysisPdf($startDate, $endDate, $wilayahId = null): string
+    public function generateKlienAnalysisPdf($startDate, $endDate, $wilayahId = null, ?string $search = null): string
     {
         $rows = Klien::query()
             ->when($wilayahId !== null, fn ($q) => $q->where('wilayah_id', $wilayahId))
+            ->when($search !== null && trim($search) !== '', function ($query) use ($search) {
+                $query->where(function ($subQuery) use ($search) {
+                    $subQuery->where('nama_klien', 'like', '%' . trim($search) . '%')
+                        ->orWhere('alamat', 'like', '%' . trim($search) . '%');
+                });
+            })
             ->get()
             ->map(function ($klien) use ($startDate, $endDate) {
                 $visits = JadwalKlien::join('jadwal_kunjungan', 'jadwal_klien.jadwal_kunjungan_id', '=', 'jadwal_kunjungan.id')

@@ -1,6 +1,11 @@
 @extends('layouts.app')
 
 @section('content')
+@php
+    $isManager = auth()->user()?->isManager();
+    $exportRoute = $isManager ? 'manager.reports.export-klien-analysis' : 'admin.reports.export-klien-analysis';
+    $exportFilters = request()->only(['search', 'start_date', 'end_date']);
+@endphp
 <div class="container-fluid py-4">
     <!-- Header -->
     <div class="row mb-4">
@@ -18,15 +23,15 @@
                     <form method="GET" class="row g-3">
                         <div class="col-md-3">
                             <label class="form-label">Cari Klien</label>
-                            <input type="text" name="search" class="form-control" placeholder="Nama klien" value="{{ request('search') }}">
+                            <input type="text" name="search" class="form-control" placeholder="Nama klien" value="{{ $search }}">
                         </div>
                         <div class="col-md-3">
                             <label class="form-label">Dari Tanggal</label>
-                            <input type="date" name="start_date" class="form-control" value="{{ request('start_date') }}">
+                            <input type="date" name="start_date" class="form-control" value="{{ $startDate }}">
                         </div>
                         <div class="col-md-3">
                             <label class="form-label">Sampai Tanggal</label>
-                            <input type="date" name="end_date" class="form-control" value="{{ request('end_date') }}">
+                            <input type="date" name="end_date" class="form-control" value="{{ $endDate }}">
                         </div>
                         <div class="col-md-3 d-flex align-items-end">
                             <button type="submit" class="btn btn-primary w-100">
@@ -42,10 +47,10 @@
     <!-- Export Button -->
     <div class="row mb-3">
         <div class="col-md-12">
-            <a href="{{ route(auth()->user()?->isManager() ? 'manager.reports.export-klien-analysis' : 'admin.reports.export-klien-analysis', request()->only(['start_date', 'end_date'])) }}" class="btn btn-success">
+            <a href="{{ route($exportRoute, $exportFilters) }}" class="btn btn-success">
                 <i class="fas fa-download"></i> Download Excel
             </a>
-            <a href="{{ route(auth()->user()?->isManager() ? 'manager.reports.export-klien-analysis' : 'admin.reports.export-klien-analysis', array_merge(request()->only(['start_date', 'end_date']), ['format' => 'pdf'])) }}" class="btn btn-danger">
+            <a href="{{ route($exportRoute, array_merge($exportFilters, ['format' => 'pdf'])) }}" class="btn btn-danger">
                 <i class="fas fa-file-pdf"></i> Download PDF
             </a>
         </div>

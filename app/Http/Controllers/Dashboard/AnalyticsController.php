@@ -156,10 +156,15 @@ class AnalyticsController extends Controller
     {
         $startDate = $request->get('start_date', Carbon::now()->subDays(30)->toDateString());
         $endDate = $request->get('end_date', Carbon::now()->toDateString());
-        $wilayahScope = $this->managerWilayahScope();
+        $search = trim((string) $request->get('search', ''));
 
         $klienData = Klien::with('jadwalKlien')
-            ->when($wilayahScope !== null, fn ($q) => $q->where('wilayah_id', $wilayahScope))
+            ->when($search !== '', function ($query) use ($search) {
+                $query->where(function ($subQuery) use ($search) {
+                    $subQuery->where('nama_klien', 'like', '%' . $search . '%')
+                        ->orWhere('alamat', 'like', '%' . $search . '%');
+                });
+            })
             ->get()
             ->map(function ($klien) use ($startDate, $endDate) {
                 $visits = JadwalKlien::where('klien_id', $klien->id)
@@ -198,7 +203,8 @@ class AnalyticsController extends Controller
         return view('admin.analytics.klien-analysis', compact(
             'klienData',
             'startDate',
-            'endDate'
+            'endDate',
+            'search'
         ));
     }
 
