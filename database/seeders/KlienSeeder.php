@@ -15,8 +15,13 @@ class KlienSeeder extends Seeder
     public function run(): void
     {
         $wilayah = Wilayah::firstOrCreate(
-            ['nama_wilayah' => 'Wilayah Default'],
-            ['keterangan' => 'Wilayah default untuk data klien dari klien.sql']
+            ['nama_wilayah' => 'Wilayah Palembang'],
+            ['keterangan' => 'Wilayah Klien Area Palembang']
+        );
+
+        $wilayah = Wilayah::firstOrCreate(
+            ['nama_wilayah' => 'Wilayah Banyuasin'],
+            ['keterangan' => 'Wilayah Klien Area Banyuasin']
         );
 
         $kliens = $this->getKliensFromSql();
@@ -29,7 +34,7 @@ class KlienSeeder extends Seeder
                 ],
                 [
                     'kategori' => $klien['kategori'],
-                    'wilayah_id' => $wilayah->id,
+                    'wilayah_id' => 2,
                     'latitude' => $klien['latitude'],
                     'longitude' => $klien['longitude'],
                     'contact_person' => $klien['contact_person'],

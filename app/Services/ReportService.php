@@ -328,7 +328,7 @@ class ReportService
                 ];
             })->all();
 
-        return $this->writePdf('Laporan Performa Penjualan', $startDate, $endDate, $rows, 'laporan_penjualan');
+        return $this->writePdf('Laporan Performa Penjualan', $startDate, $endDate, $rows, 'laporan_penjualan', $wilayahId);
     }
 
     public function generateRegionalPerformancePdf($startDate, $endDate, $wilayahId = null): string
@@ -361,7 +361,7 @@ class ReportService
                 ];
             })->all();
 
-        return $this->writePdf('Laporan Performa Regional', $startDate, $endDate, $rows, 'performa_regional');
+        return $this->writePdf('Laporan Performa Regional', $startDate, $endDate, $rows, 'performa_regional', $wilayahId);
     }
 
     public function generateKlienAnalysisPdf($startDate, $endDate, $wilayahId = null, ?string $search = null): string
@@ -398,22 +398,55 @@ class ReportService
                 ];
             })->all();
 
-        return $this->writePdf('Laporan Analisis Klien', $startDate, $endDate, $rows, 'analisis_klien');
+        return $this->writePdf('Laporan Analisis Klien', $startDate, $endDate, $rows, 'analisis_klien', $wilayahId);
     }
 
-    private function writePdf(string $title, string $startDate, string $endDate, array $rows, string $filenamePrefix): string
+    private function writePdf(string $title, string $startDate, string $endDate, array $rows, string $filenamePrefix, ?int $wilayahId = null): string
     {
         $path = storage_path("exports/{$filenamePrefix}_{$startDate}_to_{$endDate}.pdf");
+        $columnCount = !empty($rows)
+            ? count($rows[0]) + 1
+            : match ($filenamePrefix) {
+                'laporan_penjualan' => 8,
+                'performa_regional' => 7,
+                'analisis_klien' => 6,
+                default => 2,
+            };
 
         if (!is_dir(storage_path('exports'))) {
             mkdir(storage_path('exports'), 0755, true);
         }
 
-        Pdf::loadView('reports.pdf', compact('title', 'startDate', 'endDate', 'rows'))
+        $managerName = $this->resolveManagerSignatureName($wilayahId);
+
+        Pdf::loadView('reports.pdf', compact('title', 'startDate', 'endDate', 'rows', 'managerName', 'columnCount'))
             ->setPaper('a4', 'landscape')
             ->save($path);
 
         return $path;
+    }
+
+    private function resolveManagerSignatureName(?int $wilayahId = null): ?string
+    {
+        $managerQuery = User::role('manager')->active()->orderBy('name');
+
+        if ($wilayahId !== null) {
+            $regionalManager = (clone $managerQuery)
+                ->where('wilayah_id', $wilayahId)
+                ->first();
+
+            if ($regionalManager) {
+                return $regionalManager->name;
+            }
+        }
+
+        $manager = (clone $managerQuery)->first();
+
+        if ($manager) {
+            return $manager->name;
+        }
+
+        return User::role('manager')->orderBy('name')->value('name');
     }
 
     /**

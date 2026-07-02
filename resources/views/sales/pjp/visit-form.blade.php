@@ -146,7 +146,7 @@
                 <!-- Signature Section -->
                 <div class="card mb-4">
                     <div class="card-header bg-warning text-dark">
-                        <h5 class="mb-0"><i class="fas fa-pen"></i> Tanda Tangan Digital</h5>
+                        <h5 class="mb-0"><i class="fas fa-pen"></i> Tanda Tangan Digital Klien</h5>
                     </div>
                     <div class="card-body">
                         @if($jadwalKlien->tanda_tangan)
@@ -163,11 +163,11 @@
                                     <i class="fas fa-redo"></i> Bersihkan
                                 </button>
                                 <button type="button" class="btn btn-sm btn-primary" onclick="saveSignature()">
-                                    <i class="fas fa-check"></i> Simpan Tanda Tangan
+                                    <i class="fas fa-check"></i> Simpan Tanda Tangan Klien
                                 </button>
                             </div>
                         @endif
-                        <small class="text-muted d-block mt-2">Tanda tangan digital pelanggan</small>
+                        <small class="text-muted d-block mt-2"><span class="text-danger">*</span> Tanda tangan ini diisi oleh klien</small>
                     </div>
                 </div>
 
@@ -678,7 +678,7 @@
         // Check photos
         const hasCheckInPhoto = !!document.querySelector('#checkinPhotoContainer img[data-photo-state="saved"]');
         const hasCheckOutPhoto = !!document.querySelector('#checkoutPhotoContainer img[data-photo-state="saved"]');
-        
+
         updateChecklistItem('checkPhotos', hasCheckInPhoto && hasCheckOutPhoto);
 
         // Check results

@@ -32,6 +32,25 @@ class AdminReportExportTest extends TestCase
         $this->assertStringContainsString('.xlsx', $response->headers->get('content-disposition'));
     }
 
+    public function test_admin_can_export_sales_performance_report_as_pdf(): void
+    {
+        $admin = $this->createUserWithRole('admin');
+        $sales = $this->createUserWithRole('sales');
+        $wilayah = Wilayah::factory()->create();
+        $sales->update(['wilayah_id' => $wilayah->id]);
+        $this->createCompletedVisit($sales, $wilayah);
+
+        $response = $this->actingAs($admin)->get(route('admin.reports.export-sales-performance', [
+            'start_date' => today()->toDateString(),
+            'end_date' => today()->toDateString(),
+            'wilayah_id' => $wilayah->id,
+            'format' => 'pdf',
+        ]));
+
+        $response->assertOk();
+        $this->assertStringContainsString('.pdf', $response->headers->get('content-disposition'));
+    }
+
     public function test_admin_can_export_regional_performance_report(): void
     {
         $admin = $this->createUserWithRole('admin');
