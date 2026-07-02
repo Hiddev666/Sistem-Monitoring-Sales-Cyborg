@@ -363,23 +363,25 @@
                         </div>
                     </div>
 
-                    <div class="sidebar-section">
-                        <button class="sidebar-section-toggle {{ $scheduleAttendanceActive ? '' : 'collapsed' }}" type="button" data-bs-toggle="collapse" data-bs-target="#sidebarSchedule" aria-expanded="{{ $scheduleAttendanceActive ? 'true' : 'false' }}" aria-controls="sidebarSchedule">
-                            <span class="sidebar-section-title">
-                                <i class="fas fa-calendar-check"></i>
-                                <span>Penjadwalan & Absensi</span>
-                            </span>
-                            <i class="fas fa-chevron-down sidebar-section-caret"></i>
-                        </button>
-                        <div class="collapse {{ $scheduleAttendanceActive ? 'show' : '' }} sidebar-section-body" id="sidebarSchedule">
-                            <a class="nav-link {{ request()->routeIs('admin.pjp.*') ? 'active' : '' }}" href="{{ route('admin.pjp.index') }}">
-                                <i class="fas fa-calendar-check"></i> PJP (Jadwal)
-                            </a>
-                            <a class="nav-link {{ request()->routeIs('admin.attendance.*') ? 'active' : '' }}" href="{{ route('admin.attendance.recap') }}">
-                                <i class="fas fa-clock"></i> Absensi
-                            </a>
+                    @can('create_pjp')
+                        <div class="sidebar-section">
+                            <button class="sidebar-section-toggle {{ $scheduleAttendanceActive ? '' : 'collapsed' }}" type="button" data-bs-toggle="collapse" data-bs-target="#sidebarSchedule" aria-expanded="{{ $scheduleAttendanceActive ? 'true' : 'false' }}" aria-controls="sidebarSchedule">
+                                <span class="sidebar-section-title">
+                                    <i class="fas fa-calendar-check"></i>
+                                    <span>Penjadwalan & Absensi</span>
+                                </span>
+                                <i class="fas fa-chevron-down sidebar-section-caret"></i>
+                            </button>
+                            <div class="collapse {{ $scheduleAttendanceActive ? 'show' : '' }} sidebar-section-body" id="sidebarSchedule">
+                                <a class="nav-link {{ request()->routeIs('admin.pjp.*') ? 'active' : '' }}" href="{{ route('admin.pjp.index') }}">
+                                    <i class="fas fa-calendar-check"></i> PJP (Jadwal)
+                                </a>
+                                <a class="nav-link {{ request()->routeIs('admin.attendance.*') ? 'active' : '' }}" href="{{ route('admin.attendance.recap') }}">
+                                    <i class="fas fa-clock"></i> Absensi
+                                </a>
+                            </div>
                         </div>
-                    </div>
+                    @endcan
                 @endif
 
                 @if($authUser?->isSales())

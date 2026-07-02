@@ -9,9 +9,11 @@
             <h2><i class="fas fa-calendar-alt"></i> Jadwal Kunjungan (PJP)</h2>
         </div>
         <div class="col-md-4 text-end">
-            <a href="{{ route('admin.pjp.create') }}" class="btn btn-primary">
-                <i class="fas fa-plus"></i> Buat Jadwal Baru
-            </a>
+            @can('create_pjp')
+                <a href="{{ route('admin.pjp.create') }}" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Buat Jadwal Baru
+                </a>
+            @endcan
         </div>
     </div>
 

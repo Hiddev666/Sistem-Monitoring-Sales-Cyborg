@@ -195,7 +195,7 @@
             bottom: 0;
             z-index: 1040;
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
+            grid-template-columns: repeat(5, 1fr);
             background: #ffffff;
             border-top: 1px solid #e5e7eb;
             box-shadow: 0 -2px 12px rgba(15, 23, 42, 0.08);
@@ -369,10 +369,16 @@
                 <i class="fas fa-house"></i>
                 <span>Beranda</span>
             </a>
-            <a href="{{ route('sales.pjp.today') }}" class="sales-nav-link {{ request()->routeIs('sales.pjp.*') ? 'active' : '' }}">
+            <a href="{{ route('sales.pjp.today') }}" class="sales-nav-link {{ request()->routeIs('sales.pjp.today', 'sales.pjp.show') ? 'active' : '' }}">
                 <i class="fas fa-calendar-day"></i>
                 <span>Jadwal</span>
             </a>
+            @can('create_pjp_self')
+                <a href="{{ route('sales.pjp.create') }}" class="sales-nav-link {{ request()->routeIs('sales.pjp.create') ? 'active' : '' }}">
+                    <i class="fas fa-plus-circle"></i>
+                    <span>Buat Jadwal</span>
+                </a>
+            @endcan
             <a href="{{ route('sales.attendance.index') }}" class="sales-nav-link {{ request()->routeIs('sales.attendance.*') ? 'active' : '' }}">
                 <i class="fas fa-clock"></i>
                 <span>Absensi</span>

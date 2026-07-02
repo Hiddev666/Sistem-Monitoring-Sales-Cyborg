@@ -27,6 +27,11 @@
                     </div>
 
                     <div class="d-grid gap-2">
+                        @can('create_pjp_self')
+                            <a href="{{ route('sales.pjp.create') }}" class="btn btn-success">
+                                <i class="fas fa-plus-circle"></i> Buat Jadwal Sendiri
+                            </a>
+                        @endcan
                         <a href="{{ route('sales.attendance.index') }}" class="btn btn-primary">
                             <i class="fas fa-clock"></i> Buka Absensi
                         </a>

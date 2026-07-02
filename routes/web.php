@@ -82,6 +82,12 @@ Route::middleware(['auth', 'session.timeout'])->group(function () {
 
         // PJP (Jadwal Kunjungan) - Sales View (F-09, F-10, F-11)
         Route::prefix('pjp')->name('pjp.')->group(function () {
+            // PJP Creation (Self-Service) - Sales creates own schedule
+            Route::middleware('permission:create_pjp_self')->group(function () {
+                Route::get('/create', [SalesPJPController::class, 'create'])->name('create');
+                Route::post('/', [SalesPJPController::class, 'store'])->name('store');
+            });
+
             Route::get('/today', [SalesPJPController::class, 'today'])->name('today');
             Route::get('/{jadwal}', [SalesPJPController::class, 'show'])->name('show');
             Route::post('/{jadwal}/mulai-perjalanan', [SalesPJPController::class, 'startJourney'])->name('start');

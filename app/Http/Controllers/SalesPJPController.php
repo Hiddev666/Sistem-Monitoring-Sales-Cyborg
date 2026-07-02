@@ -5,8 +5,10 @@ namespace App\Http\Controllers;
 use App\Models\Configuration;
 use App\Models\JadwalKunjungan;
 use App\Models\JadwalKlien;
+use App\Models\Klien;
 use App\Services\GpsValidationService;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 class SalesPJPController extends Controller
 {
@@ -15,6 +17,89 @@ class SalesPJPController extends Controller
     public function __construct(GpsValidationService $gpsService)
     {
         $this->gpsService = $gpsService;
+    }
+
+    /**
+     * Show form for sales to create their own schedule
+     * GET /sales/pjp/create
+     */
+    public function create()
+    {
+        $user = auth()->user();
+        $klien = Klien::active()->get();
+
+        return view('sales.pjp.create', [
+            'klien' => $klien,
+        ]);
+    }
+
+    /**
+     * Store new schedule created by sales
+     * POST /sales/pjp
+     */
+    public function store(Request $request)
+    {
+        $user = auth()->user();
+
+        $validated = $request->validate([
+            'tanggal' => 'required|date|after:yesterday',
+            'keterangan' => 'nullable|string|max:255',
+            'klien' => 'required|array|min:1',
+            'klien.*' => 'exists:klien,id',
+        ], [
+            'klien.required' => 'Minimal satu klien harus dipilih.',
+            'klien.min' => 'Minimal satu klien harus dipilih.',
+            'klien.*.exists' => 'Klien yang dipilih tidak valid',
+        ]);
+
+        try {
+            $this->ensureScheduleDoesNotExist($user->id, $validated['tanggal']);
+
+            $jadwal = JadwalKunjungan::create([
+                'user_id' => $user->id,
+                'tanggal' => $validated['tanggal'],
+                'keterangan' => $validated['keterangan'],
+                'status' => 'pending',
+                'created_by' => $user->id,
+            ]);
+
+            foreach ($validated['klien'] as $index => $klienId) {
+                JadwalKlien::create([
+                    'jadwal_kunjungan_id' => $jadwal->id,
+                    'klien_id' => $klienId,
+                    'urutan' => $index + 1,
+                    'status' => 'pending',
+                ]);
+            }
+
+            return redirect()
+                ->route('sales.pjp.today')
+                ->with('success', 'Jadwal kunjungan berhasil dibuat!');
+        } catch (ValidationException $e) {
+            throw $e;
+        } catch (\Exception $e) {
+            return redirect()
+                ->back()
+                ->withInput()
+                ->with('error', 'Jadwal kunjungan gagal disimpan. Silakan coba lagi.');
+        }
+    }
+
+    /**
+     * Ensure no duplicate schedule for the same user on the same date
+     */
+    private function ensureScheduleDoesNotExist(int $userId, string $tanggal): void
+    {
+        $exists = JadwalKunjungan::query()
+            ->where('user_id', $userId)
+            ->whereDate('tanggal', $tanggal)
+            ->exists();
+
+        if ($exists) {
+            throw ValidationException::withMessages([
+                'tanggal' => 'Anda sudah memiliki jadwal kunjungan pada tanggal tersebut. Silakan pilih tanggal lain.',
+            ]);
+        }
     }
 
     /**

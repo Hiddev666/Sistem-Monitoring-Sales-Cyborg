@@ -39,6 +39,7 @@ class RoleSeeder extends Seeder
             
             // Scheduling
             ['name' => 'create_pjp', 'description' => 'Create PJP (Jadwal Kunjungan)'],
+            ['name' => 'create_pjp_self', 'description' => 'Create own PJP (Sales self-service)'],
             ['name' => 'view_pjp', 'description' => 'View PJP'],
             ['name' => 'edit_pjp', 'description' => 'Edit PJP'],
             ['name' => 'delete_pjp', 'description' => 'Delete PJP'],
@@ -85,7 +86,8 @@ class RoleSeeder extends Seeder
 
         $salesRole = Role::findByName('sales');
         $salesRole->givePermissionTo([
-            'checkin_attendance', 'create_kunjungan', 'upload_photo', 'view_pjp'
+            'checkin_attendance', 'create_kunjungan', 'upload_photo', 'view_pjp',
+            'create_pjp_self'
         ]);
     }
 }
