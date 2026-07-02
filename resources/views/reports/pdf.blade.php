@@ -118,6 +118,7 @@
             <div class="signature-role">Manager</div>
             <div class="signature-role">&nbsp;&nbsp;</div>
             <br><br>
+            <!-- Add Spaces -->
             <div class="signature-name">{{ $managerName ?? 'Manager' }}</div>
         </div>
         <div class="signature-clear"></div>
