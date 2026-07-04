@@ -86,7 +86,7 @@
             <tr>
                 <th>No</th>
                 @foreach(array_keys($rows[0] ?? []) as $header)
-                <th>{{ $header }}</th>
+                <th>{{ $header == "Selesai" ? "Sudah Dikunjungi" : $header }}</th>
                 @endforeach
             </tr>
         </thead>

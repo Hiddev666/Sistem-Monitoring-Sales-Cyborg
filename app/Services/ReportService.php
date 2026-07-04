@@ -246,7 +246,7 @@ class ReportService
 
         foreach ($wilayah as $w) {
             $userIds = $w->users->pluck('id')->toArray();
-            
+
             $visits = JadwalKlien::join('jadwal_kunjungan', 'jadwal_klien.jadwal_kunjungan_id', '=', 'jadwal_kunjungan.id')
                 ->whereIn('jadwal_kunjungan.user_id', $userIds ?: [null])
                 ->whereBetween('jadwal_kunjungan.tanggal', [$startDate, $endDate])
